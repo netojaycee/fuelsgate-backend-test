@@ -25,6 +25,9 @@ async function bootstrap() {
     'https://www.fuelsgate.com',
     'https://fuelsgate.com',
     'https://fuelsgate-admin-portal.vercel.app',
+    'https://fuelsgate-admin-test.vercel.app',
+    'https://fuelsgate-frontend-test.vercel.app',
+
   ];
   app.enableCors({
     origin: allowedOrigins,
