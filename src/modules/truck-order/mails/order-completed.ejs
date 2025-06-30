@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Order Completed - Success!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #28a745;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .details {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .success-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Order Completed Successfully!</h1>
+        </div>
+
+        <div class="content">
+            <h2>Hello <%= Recipient %>,</h2>
+
+            <div class="success-badge">
+                <strong>🎉 Your order has been completed successfully!</strong>
+            </div>
+
+            <p>We're pleased to inform you that your truck order has been <strong>COMPLETED</strong>.</p>
+
+            <div class="details">
+                <h3>📋 Completed Order Details:</h3>
+                <p><strong>Truck ID:</strong>
+                    <%= TruckId %>
+                </p>
+                <p><strong>Loading Depot:</strong>
+                    <%= LoadingDepot %>
+                </p>
+                <p><strong>Destination:</strong>
+                    <%= Destination %>, <%= City %>, <%= State %>
+                </p>
+                <p><strong>Completion Time:</strong>
+                    <%= OrderTime %>
+                </p>
+                <p><strong>Completed By:</strong>
+                    <%= Sender %>
+                </p>
+            </div>
+
+            <p>Thank you for choosing FuelsGate for your transportation needs. We hope you had a great experience with
+                our service.</p>
+
+            <div style="text-align: center;">
+                <a href="<%= OrderUrl %>" class="button">View Order Summary</a>
+            </div>
+
+            <p><strong>What's Next?</strong></p>
+            <ul>
+                <li>You can view your completed order details in your dashboard</li>
+                <li>Rate your experience with this truck owner/transporter</li>
+                <li>Download your ticket</li>
+                <li>Book your next order with us!</li>
+            </ul>
+
+            <p>Thank you for your business!</p>
+            
+        </div>
+
+        <%- include("./shared/footer") %>
+
+    </div>
+</body>
+
+</html>

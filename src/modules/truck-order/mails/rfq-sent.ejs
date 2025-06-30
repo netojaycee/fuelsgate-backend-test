@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>New Quote Received!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #17a2b8;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .details {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #17a2b8;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .info-badge {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .price-highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .accept-btn {
+            background: #28a745;
+            margin: 5px;
+        }
+
+        .reject-btn {
+            background: #dc3545;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📨 New Quote Received!</h1>
+        </div>
+
+        <div class="content">
+            <h2>Hello <%= Recipient %>,</h2>
+
+            <div class="info-badge">
+                <strong>You have received a new quote for your order!</strong>
+            </div>
+
+            <p>Great news! <strong>
+                    <%= Sender %>
+                </strong> has sent you a quote for your truck order.</p>
+
+            <div class="details">
+                <h3>📋 Quote Details:</h3>
+                <p><strong>Truck ID:</strong>
+                    <%= TruckId %>
+                </p>
+                <p><strong>Loading Depot:</strong>
+                    <%= LoadingDepot %>
+                </p>
+                <p><strong>Destination:</strong>
+                    <%= Destination %>, <%= City %>, <%= State %>
+                </p>
+                <p><strong>Expected Arrival:</strong>
+                    <%= TruckArrivalTime %>
+                </p>
+                <p><strong>Quote Sent:</strong>
+                    <%= OrderTime %>
+                </p>
+
+                <div class="price-highlight">
+                    <h3>💰 Quoted Price: <%= QuotePrice %>
+                    </h3>
+                </div>
+            </div>
+
+            <p><strong>Review the Quote:</strong></p>
+            <ul>
+                <li>Check the quoted price and terms</li>
+                <li>Review the truck owner's/transporter's profile</li>
+                <li>Compare with other quotes if available</li>
+                <li>Make your decision - Accept or Decline</li>
+            </ul>
+
+            <div class="action-buttons">
+                <a href="<%= OrderUrl %>" class="button">Review Quote Details</a>
+            </div>
+
+            <p><strong>Next Steps:</strong></p>
+            <p>Please log in to your dashboard to review the complete quote details and make your decision. You can
+                accept or decline the quote based on your requirements.</p>
+
+            <p>Time is valuable, so please review the quote promptly to ensure the best service.</p>
+
+           
+        </div>
+
+        <%- include("./shared/footer") %>
+
+    </div>
+</body>
+
+</html>

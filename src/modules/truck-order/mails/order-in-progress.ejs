@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Order Status Update - In Progress</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .details {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 Order Status Update</h1>
+        </div>
+
+        <div class="content">
+            <h2>Hello <%= Recipient %>,</h2>
+
+            <p>Great news! Your truck order is now <strong>IN PROGRESS</strong>.</p>
+
+            <div class="details">
+                <h3>📋 Order Details:</h3>
+                <p><strong>Truck ID:</strong>
+                    <%= TruckId %>
+                </p>
+                <p><strong>Loading Depot:</strong>
+                    <%= LoadingDepot %>
+                </p>
+                <p><strong>Destination:</strong>
+                    <%= Destination %>, <%= City %>, <%= State %>
+                </p>
+                <p><strong>Expected Arrival:</strong>
+                    <%= TruckArrivalTime %>
+                </p>
+                <p><strong>Status Updated By:</strong>
+                    <%= Sender %>
+                </p>
+                <p><strong>Update Time:</strong>
+                    <%= OrderTime %>
+                </p>
+            </div>
+
+            <p>The truck owner/transporter has started processing your order. You can track the progress and communicate
+                with them through your dashboard.</p>
+
+            <div style="text-align: center;">
+                <a href="<%= OrderUrl %>" class="button">View Order Details</a>
+            </div>
+
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+
+        </div>
+
+        <%- include("./shared/footer") %>
+
+    </div>
+</body>
+
+</html>

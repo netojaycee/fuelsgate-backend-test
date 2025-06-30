@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuelsgate | New Offer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"/>
+  <style>
+    * {
+      margin: 0px;
+    }
+    p {
+      font-size: 15px;
+      line-height: 24px;
+      font-weight: 500;
+    }
+    .margin {
+      margin-bottom: 15px;
+    }
+    .marginY {
+      margin-bottom: 15px;
+      margin-top: 15px;
+    }
+    td {
+      padding: auto 15px;
+    }
+    .salutation p{
+      margin-top: 10px !important;
+    }
+    .footer-style {
+      font-size: 13px; font-weight: 700;
+    }
+    .footer-style-medium {
+      font-size: 13px; font-weight: 500; text-decoration: none;
+    }
+  </style>
+</head>
+<body style="font-family: 'Poppins', Arial, sans-serif; padding: 10px;">
+  <table width="100%" cellspacing="0" cellpadding="0">
+    <tbody>
+      <tr>
+        <td>
+          <p>
+            Dear <%- Recipient%>,
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <p class="marginY">
+            You have a new order from <%- Sender%>.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <p class="margin">
+            <b>Order Details</b>
+            <br>
+            <span>Product: <%- ProductName%></span>
+            <br>
+            <span>Volume: <%- Volume%></span>
+            <br>
+            <span>Order Price: &#8358;<%- OrderPrice%></span>
+            <br>
+            <span>Time of order: <%- OrderTime%></span>
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <p class="margin">
+            <a href="<%- OrderUrl%>">Click here to view order details</a>.
+          </p>
+        </td>
+      </tr>
+     <%- include("./shared/footer") %>
+    </tbody>
+  </table>
+</body>
+</html>

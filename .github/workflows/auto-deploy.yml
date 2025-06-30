@@ -1,0 +1,52 @@
+name: Deploy Fuelsgate Api Service On Prod
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Stop service, then clean app & build
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          password: ${{secrets.DROPLET_PASSWORD}}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          port: ${{ secrets.DROPLET_PORT }}
+          timeout: 120s
+          script: |
+            cd ~/apps/fuelsgate-backend
+            pm2 stop fuelsgate
+            pm2 delete fuelsgate
+
+      - name: Copy code to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          password: ${{secrets.DROPLET_PASSWORD}}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          port: ${{ secrets.DROPLET_PORT }}
+          source: ./
+          target: ~/apps/fuelsgate-backend
+
+      - name: Run Bootstrap Commands
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DIGITALOCEAN_HOST }}
+          password: ${{secrets.DROPLET_PASSWORD}}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          port: ${{ secrets.DROPLET_PORT }}
+          timeout: 120s
+          script: |
+            cd ~/apps/fuelsgate-backend
+            yarn 
+            yarn build
+            yarn deploy:prod

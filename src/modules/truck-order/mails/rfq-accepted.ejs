@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Quote Accepted - Congratulations!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #28a745;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .details {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .success-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .price-highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Quote Accepted!</h1>
+        </div>
+
+        <div class="content">
+            <h2>Hello <%= Recipient %>,</h2>
+
+            <div class="success-badge">
+                <strong>Congratulations! Your quote has been accepted by the buyer!</strong>
+            </div>
+
+            <p>Great news! The buyer <strong>
+                    <%= BuyerName %>
+                </strong> has accepted your quote for their truck order.</p>
+
+            <div class="details">
+                <h3>📋 Accepted Quote Details:</h3>
+                <p><strong>Truck ID:</strong>
+                    <%= TruckId %>
+                </p>
+                <p><strong>Loading Depot:</strong>
+                    <%= LoadingDepot %>
+                </p>
+                <p><strong>Destination:</strong>
+                    <%= Destination %>, <%= City %>, <%= State %>
+                </p>
+                <p><strong>Expected Arrival:</strong>
+                    <%= TruckArrivalTime %>
+                </p>
+                <p><strong>Accepted Time:</strong>
+                    <%= OrderTime %>
+                </p>
+
+                <div class="price-highlight">
+                    <h3>💰 Accepted Quote Price: <%= QuotePrice %>
+                    </h3>
+                </div>
+            </div>
+
+            <p><strong>Next Steps:</strong></p>
+            <ul>
+                <li>Review the order details and prepare for delivery</li>
+                <li>Contact the buyer if you need any clarification</li>
+                <li>Update the order status as you progress</li>
+                <li>Ensure timely delivery to maintain your rating</li>
+            </ul>
+
+            <div style="text-align: center;">
+                <a href="<%= OrderUrl %>" class="button">View Order Details</a>
+            </div>
+
+            <p>Thank you for being a valued partner with FuelsGate!</p>
+
+           
+        </div>
+
+        <%- include("./shared/footer") %>
+
+    </div>
+</body>
+
+</html>
