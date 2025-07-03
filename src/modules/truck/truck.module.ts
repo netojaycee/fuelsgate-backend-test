@@ -13,6 +13,9 @@ import { DepotHubRepository } from '../depot-hub/repositories/depot-hub.reposito
 import { TruckOrder, TruckOrderSchema } from '../truck-order/entities/truck-order.entity';
 import { TransporterRepository } from '../transporter/repositories/transporter.repository';
 import { Transporter, TransporterSchema } from '../transporter/entities/transporter.entity';
+import { UserRepository } from '../user/repositories/user.repository';
+import { User, UserSchema } from '../user/entities/user.entity';
+import { UserRole, UserRoleSchema } from '../role/entities/user-role.entities';
 
 @Module({
   imports: [
@@ -23,10 +26,12 @@ import { Transporter, TransporterSchema } from '../transporter/entities/transpor
       { name: Seller.name, schema: SellerSchema },
       { name: DepotHub.name, schema: DepotHubSchema },
       { name: Product.name, schema: ProductSchema },
+      { name: User.name, schema: UserSchema },
+      { name: UserRole.name, schema: UserRoleSchema },
     ]),
   ],
   controllers: [TruckController],
-  providers: [TruckService, TruckRepository, TransporterRepository, SellerRepository, DepotHubRepository, ProductRepository],
+  providers: [TruckService, TruckRepository, TransporterRepository, SellerRepository, DepotHubRepository, ProductRepository, UserRepository],
   exports: [TruckService, TruckRepository],
 })
 export class TruckModule { }

@@ -25,12 +25,14 @@ import {
 } from '../validations/authentication.validation';
 import { errorResponse } from 'src/utils/responseHandler';
 import { AuditLog } from 'src/shared/decorators/audit-log.decorator';
+import { BuyerService } from 'src/modules/buyer/services/buyer.service';
 
 @Controller('')
 export class AuthenticationController {
   constructor(
     private readonly authenticationService: AuthenticationService,
     private readonly userService: UserService,
+    private readonly buyerService: BuyerService,
   ) { }
   @Public()
   @Post('login')
@@ -90,23 +92,35 @@ export class AuthenticationController {
 
       // If role is transporter, just return registration success
       if (registerData.role === 'transporter') {
-        return res.status(200).json({
-          message: 'User registration successfully',
-          data: { role: registerData.role },
-          statusCode: 200,
-        });
+      return res.status(200).json({
+        message: 'User registration successfully',
+        data: { role: registerData.role },
+        statusCode: 200,
+      });
       }
 
       // For other roles, attempt login and return current response
       const data = await this.authenticationService.validateUser(
-        registerData.email,
-        registerData.password,
+      registerData.email,
+      registerData.password,
       );
 
+      if (registerData.role === 'buyer') {
+      const buyerData = await this.buyerService.saveNewBuyerInfo({category: 'reseller', userId: data.user._id}, data.user);
       return res.status(200).json({
-        message: 'User registration successfully',
-        data,
+        message: 'Buyer Information saved successfully',
+        data: {
+        ...data,
+        buyerData
+        },
         statusCode: 200,
+      });
+      }
+
+      return res.status(200).json({
+      message: 'User registration successfully',
+      data,
+      statusCode: 200,
       });
     } catch (error) {
       return errorResponse(error.response, error.message, error.status, res);

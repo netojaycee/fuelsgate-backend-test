@@ -16,10 +16,17 @@ export const truckSchema = yup.object({
   depot: yup
     .string()
     .required('Depot is required'),
-  currentState: yup
+  // currentState: yup
+  //   .string()
+  //   .required('Select truck current state location is required'),
+  // currentCity: yup
+  //   .string()
+  //   .required('Select truck current city location is required'),
+});
+
+export const truckStatusSchema = yup.object({
+  status: yup
     .string()
-    .required('Select truck current state location is required'),
-  currentCity: yup
-    .string()
-    .required('Select truck current city location is required'),
+    .oneOf(['pending', 'available', 'locked'], 'Status must be one of: pending, available, locked')
+    .required('Status is required'),
 });

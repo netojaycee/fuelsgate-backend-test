@@ -32,6 +32,9 @@ export class Order {
 
   @Prop({ default: null })
   expiresIn: Date;
+
+  @Prop({ default: false })
+  isRated: boolean;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

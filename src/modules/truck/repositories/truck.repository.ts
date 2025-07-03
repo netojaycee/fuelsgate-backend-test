@@ -22,7 +22,8 @@ const transporterTruckFilter = (transporterId: Types.ObjectId) => ({
 const lockedTransporterTruckFilter = (transporterId: Types.ObjectId) => ({
   profileType: 'Transporter',
   profileId: transporterId,
-  status: { $in: ['pending', 'in-progress'] },
+  // status: { $in: ['pending', 'in-progress'] },
+  status: { $in: ['locked'] },
 });
 
 @Injectable()

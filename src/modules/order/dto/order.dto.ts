@@ -12,6 +12,8 @@ export interface OrderDto {
   status: OrderStatus
   volume: number
   expiresIn: Date
+  isRated?: boolean
+
 }
 
 export interface OrderQueryDto extends QueryDto {

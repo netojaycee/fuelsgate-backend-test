@@ -1,12 +1,12 @@
 import { Types } from "mongoose";
 import { QueryDto } from "src/shared/types";
 
-export type TruckStatus = 'available' | 'locked';
+export type TruckStatus = 'pending' | 'available' | 'locked';
 
 export interface TruckDto {
   profileId?: string | Types.ObjectId;
-  currentState?: string;
-  currentCity?: string;
+  // currentState?: string;
+  // currentCity?: string;
   profileType: string;
   truckNumber: string
   capacity: string

@@ -6,7 +6,7 @@ export type BuyerDocument = HydratedDocument<Buyer>;
 
 @Schema({ versionKey: false, timestamps: true })
 export class Buyer {
-  @Prop({ required: true, enum: ['reseller', 'basic-consumer'] })
+  @Prop({ required: true, enum: ['reseller', 'basic-consumer'], default: 'reseller' })
   category: string;
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true, unique: true })

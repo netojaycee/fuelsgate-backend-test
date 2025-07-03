@@ -65,6 +65,9 @@ export class TruckOrder {
     enum: ['pending', 'in-progress', 'completed', 'cancelled'],
   })
   status: TruckOrderStatus;
+
+  @Prop({ default: false })
+  isRated: boolean;
 }
 
 export const TruckOrderSchema = SchemaFactory.createForClass(TruckOrder);

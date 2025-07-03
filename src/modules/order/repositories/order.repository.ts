@@ -51,7 +51,21 @@ export class OrderRepository {
       .exec();
   }
 
-  async update(orderId: string, orderData: OrderDto) {
+  // async update(orderId: string, orderData: OrderDto) {
+  //   const updatedOrder = await this.orderModel.findByIdAndUpdate(
+  //     orderId,
+  //     orderData,
+  //     { new: true, runValidators: true },
+  //   );
+
+  //   if (!updatedOrder) {
+  //     throw new NotFoundException(`Order with ID ${orderId} not found.`);
+  //   }
+
+  //   return updatedOrder;
+  // }
+  // partial update support 
+  async update(orderId: string, orderData: Partial<OrderDto>) {
     const updatedOrder = await this.orderModel.findByIdAndUpdate(
       orderId,
       orderData,

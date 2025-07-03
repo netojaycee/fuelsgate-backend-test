@@ -69,6 +69,13 @@ export class RatingService {
             // Update user's average rating
             await this.updateUserAverageRating(ratedUserId);
 
+            // Update the isRated flag on the corresponding order or truck order
+            if (truckOrderId) {
+                await this.truckOrderRepository.update(truckOrderId, { isRated: true });
+            } else if (orderId) {
+                await this.orderRepository.update(orderId, { isRated: true });
+            }
+
             return newRating;
         } catch (error) {
             // Handle duplicate key error

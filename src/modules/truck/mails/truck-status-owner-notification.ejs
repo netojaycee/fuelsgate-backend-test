@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuelsgate | Truck Status Updated</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet" />
+    <style>
+        * {
+            margin: 0px;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 24px;
+            font-weight: 500;
+        }
+
+        .margin {
+            margin-bottom: 15px;
+        }
+
+        .marginY {
+            margin-bottom: 15px;
+            margin-top: 15px;
+        }
+
+        td {
+            padding: auto 15px;
+        }
+
+        .salutation p {
+            margin-top: 10px !important;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Poppins', sans-serif; background-color: #f3f4f6; margin: 0; padding: 0;">
+    <table style="width: 100%; background-color: #f3f4f6; padding: 20px 0;">
+        <tr>
+            <td style="text-align: center;">
+                <table
+                    style="max-width: 600px; background-color: #ffffff; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <tr>
+                        <td
+                            style="padding: 30px 40px; text-align: center; background-color: #1f2937; border-radius: 8px 8px 0 0;">
+                            <img src="https://fuelsgate.com/assets/images/logo-white.png" alt="Fuelsgate Logo"
+                                style="max-width: 150px; height: auto;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h1
+                                style="color: #1f2937; font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center;">
+                                Truck Status Updated
+                            </h1>
+
+                            <div class="salutation">
+                                <p class="margin" style="color: #374151;">Dear <%= TruckOwner %>,</p>
+                            </div>
+
+                            <p class="margin" style="color: #374151;">
+                                We wanted to inform you that the status of your truck has been updated by our admin
+                                team.
+                            </p>
+
+                            <table
+                                style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9fafb; border-radius: 6px;">
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Truck Number:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= TruckNumber %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Truck Capacity:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= TruckCapacity %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Depot:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= Depot %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Previous Status:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= PreviousStatus %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px; font-weight: 600; color: #374151;">New Status:</td>
+                                    <td
+                                        style="padding: 15px; font-weight: 600; text-transform: uppercase; color: <%= NewStatus === 'available' ? '#10b981' : '#ef4444' %>;">
+                                        <%= NewStatus %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <% if (NewStatus==='available' ) { %>
+                                <div
+                                    style="background-color: #ecfdf5; border: 1px solid #10b981; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                                    <p style="color: #065f46; margin: 0; font-weight: 600;">
+                                        🎉 Great news! Your truck is now available for orders.
+                                    </p>
+                                </div>
+                                <% } else if (NewStatus==='locked' ) { %>
+                                    <div
+                                        style="background-color: #fef2f2; border: 1px solid #ef4444; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                                        <p style="color: #991b1b; margin: 0; font-weight: 600;">
+                                            ⚠️ Important: Your truck has been locked and is temporarily unavailable for
+                                            new orders.
+                                        </p>
+                                    </div>
+                                    <% } %>
+
+                                        <p class="margin" style="color: #374151;">
+                                            You can view and manage your trucks through your dashboard at any time.
+                                        </p>
+
+                                        <div style="text-align: center; margin: 30px 0;">
+                                            <a href="<%= DashboardUrl %>"
+                                                style="background-color: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                                                View My Trucks
+                                            </a>
+                                        </div>
+
+                                        <p class="margin" style="color: #6b7280; font-size: 14px;">
+                                            <strong>Updated:</strong>
+                                            <%= UpdateTime %>
+                                        </p>
+
+                                        <p style="color: #6b7280; font-size: 14px;">
+                                            If you have any questions about this status change, please contact our
+                                            support team.
+                                        </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 20px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                Need help? Contact us at <a href="mailto:support@fuelsgate.com"
+                                    style="color: #1f2937;">support@fuelsgate.com</a>
+                            </p>
+                            <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">
+                                © <%= new Date().getFullYear() %> Fuelsgate. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

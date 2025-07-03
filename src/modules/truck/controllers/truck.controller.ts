@@ -2,7 +2,7 @@ import { YupValidationPipe } from "src/shared/pipes/yup-validation.pipe";
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Request, Response, UseGuards } from "@nestjs/common";
 import { TruckService } from "../services/truck.service";
 import { TruckDto, TruckQueryDto } from "../dto/truck.dto";
-import { truckSchema } from "../validations/truck.validation";
+import { truckSchema, truckStatusSchema } from "../validations/truck.validation";
 import { AuditLog } from "src/shared/decorators/audit-log.decorator";
 import { JwtAuthGuard } from "src/shared/guards/jwt-auth.guard";
 
@@ -98,6 +98,26 @@ export class TruckController {
     await this.truckService.deleteTruckData(truckId);
     return res.status(200).json({
       message: 'Truck deleted successfully',
+      statusCode: 200,
+    });
+  }
+
+  @Put(':truckId/status')
+  @AuditLog({ action: 'UPDATE_TRUCK_STATUS', module: 'TRUCK' })
+  async updateStatus(
+    @Param() param,
+    @Body(new YupValidationPipe(truckStatusSchema)) body: { status: string },
+    @Request() req,
+    @Response() res,
+  ) {
+    const { truckId } = param;
+    const { status } = body;
+    const { user } = req;
+
+    const data = await this.truckService.updateTruckStatus(truckId, status as any, user);
+    return res.status(200).json({
+      message: 'Truck status updated successfully',
+      data,
       statusCode: 200,
     });
   }

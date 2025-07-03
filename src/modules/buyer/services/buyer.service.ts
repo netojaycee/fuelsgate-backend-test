@@ -15,7 +15,7 @@ export class BuyerService {
     private productRepository: ProductRepository,
   ) { }
 
-  async saveNewBuyerInfo(buyerData: BuyerDto, user: IJwtPayload) {
+  async saveNewBuyerInfo(buyerData: BuyerDto, user: any) {
     if (user.role !== 'buyer') {
       throw new ForbiddenException(
         'You are not authorized to create a buyer account',
@@ -24,7 +24,7 @@ export class BuyerService {
 
     return await this.buyerRepository.create({
       ...buyerData,
-      userId: user.id,
+      userId: user._id,
     });
   }
 

@@ -25,6 +25,7 @@ import { UserRole, UserRoleSchema } from '../role/entities/user-role.entities';
 import { User, UserSchema } from '../user/entities/user.entity';
 import { Role, RoleSchema } from '../role/entities/role.entities';
 import { BuyerRepository } from '../buyer/repositories/buyer.repository';
+import { BuyerService } from '../buyer/services/buyer.service';
 import { SellerRepository } from '../seller/repositories/seller.repository';
 import { TransporterRepository } from '../transporter/repositories/transporter.repository';
 import { Buyer, BuyerSchema } from '../buyer/entities/buyer.entity';
@@ -32,6 +33,13 @@ import { Seller, SellerSchema } from '../seller/entities/seller.entity';
 import { Transporter, TransporterSchema } from '../transporter/entities/transporter.entity';
 import { ProductRepository } from '../product/repositories/product.repository';
 import { Product, ProductSchema } from '../product/entities/product.entity';
+import { ProductUploadRepository } from '../product-upload/repositories/product-upload.repository';
+import { ProductUpload, ProductUploadSchema } from '../product-upload/entities/product-upload.entity';
+import { Order, OrderSchema } from '../order/entities/order.entity';
+import { Offer, OfferSchema } from '../offer/entities/offer.entity';
+import { TruckRepository } from '../truck/repositories/truck.repository';
+import { Truck, TruckSchema } from '../truck/entities/truck.entity';
+import { TruckOrder, TruckOrderSchema } from '../truck-order/entities/truck-order.entity';
 // import { GoogleStrategy } from 'src/shared/strategies/google-oauth.strategy';
 // import { GoogleOauthGuard } from 'src/shared/guards/google-oauth.guard';
 import { GoogleAuthService } from './services/google-auth.service';
@@ -61,6 +69,11 @@ import { AdminSchema } from '../admin/entities/admin.entity';
       { name: Seller.name, schema: SellerSchema },
       { name: Transporter.name, schema: TransporterSchema },
       { name: Product.name, schema: ProductSchema },
+      { name: ProductUpload.name, schema: ProductUploadSchema },
+      { name: Order.name, schema: OrderSchema },
+      { name: Offer.name, schema: OfferSchema },
+      { name: Truck.name, schema: TruckSchema },
+      { name: TruckOrder.name, schema: TruckOrderSchema },
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     UserModule,
@@ -68,6 +81,7 @@ import { AdminSchema } from '../admin/entities/admin.entity';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
+
   ],
   controllers: [AuthenticationController, GoogleAuthController],
   providers: [
@@ -83,9 +97,12 @@ import { AdminSchema } from '../admin/entities/admin.entity';
     UserRoleRepository,
     RoleRepository,
     BuyerRepository,
+    BuyerService,
     SellerRepository,
     TransporterRepository,
-    ProductRepository
+    ProductRepository,
+    ProductUploadRepository,
+    TruckRepository,
   ],
   exports: [AuthenticationService],
 })

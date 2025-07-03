@@ -33,6 +33,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { RatingModule } from './modules/rating/rating.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditLogInterceptor } from './shared/interceptors/audit-log.interceptor';
+import { PlatformConfigModule } from './modules/platform-config/platform-config.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { AuditLogInterceptor } from './shared/interceptors/audit-log.interceptor
     PricingModule,
     AuditLogModule,
     RatingModule,
+    PlatformConfigModule,
   ],
   controllers: [AppController], providers: [
     AppService,

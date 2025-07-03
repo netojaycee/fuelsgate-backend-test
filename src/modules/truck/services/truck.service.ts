@@ -1,12 +1,15 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { TruckDto, TruckQueryDto } from "../dto/truck.dto";
+import { TruckDto, TruckQueryDto, TruckStatus } from "../dto/truck.dto";
 import { TruckRepository } from "../repositories/truck.repository";
 import { IJwtPayload } from "src/shared/strategies/jwt.strategy";
 import { TransporterRepository } from "src/modules/transporter/repositories/transporter.repository";
 import { SellerRepository } from "src/modules/seller/repositories/seller.repository";
 import { DepotHubRepository } from "src/modules/depot-hub/repositories/depot-hub.repository";
 import { ProductRepository } from "src/modules/product/repositories/product.repository";
+import { UserRepository } from "src/modules/user/repositories/user.repository";
+import { MailerService } from "@nestjs-modules/mailer";
 import { Types } from "mongoose";
+import { join } from "path";
 
 @Injectable()
 export class TruckService {
@@ -15,7 +18,9 @@ export class TruckService {
     private transporterRepository: TransporterRepository,
     private sellerRepository: SellerRepository,
     private depotHubRepository: DepotHubRepository,
-    private productRepository: ProductRepository
+    private productRepository: ProductRepository,
+    private userRepository: UserRepository,
+    private readonly mailService: MailerService,
   ) { }
 
   async saveNewTruckData(truckData: TruckDto, user: IJwtPayload) {
@@ -58,10 +63,23 @@ export class TruckService {
 
     if (search) searchFilter.$or.push(
       { companyName: { $regex: search, $options: 'i' } },
-      { phoneNumber: { $regex: search, $options: 'i' } }
+      { phoneNumber: { $regex: search, $options: 'i' } },
+      { truckNumber: { $regex: search, $options: 'i' } }
     );
 
-    if (status) searchFilter.$and.push({ status: { $regex: status, $options: 'i' } });
+    // Handle multiple statuses like in getUserTrucks
+    if (status) {
+      // Split status by comma and trim whitespace
+      const statusArray = status.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+      if (statusArray.length === 1) {
+        // Single status - use regex for partial matching
+        searchFilter.$and.push({ status: { $regex: statusArray[0], $options: 'i' } });
+      } else if (statusArray.length > 1) {
+        // Multiple statuses - use $in operator for exact matching
+        searchFilter.$and.push({ status: { $in: statusArray } });
+      }
+    }
 
     if (depotHubId) {
       const depotHub = await this.depotHubRepository.findOne(depotHubId)
@@ -75,17 +93,35 @@ export class TruckService {
 
     if (size) searchFilter.$and.push({ capacity: { $regex: size, $options: 'i' } });
 
-    if (profileId) {
-      if (user.role === 'transporter') {
-        const transporter = await this.transporterRepository.findOne(profileId);
-        if (!transporter) throw new BadRequestException("Transporter ID is invalid");
-        if (transporter) searchFilter.$and.push({ profileId: transporter._id });
-      }
+    // For admin users, don't filter by profileId unless explicitly provided in the query
+    // For non-admin users, always filter by their profile type
+    if (user.role !== 'admin') {
+      if (profileId) {
+        if (user.role === 'transporter') {
+          const transporter = await this.transporterRepository.findOne(profileId);
+          if (!transporter) throw new BadRequestException("Transporter ID is invalid");
+          if (transporter) searchFilter.$and.push({ profileId: transporter._id });
+        }
 
-      if (user.role === 'seller') {
-        const seller = await this.sellerRepository.findOne(profileId);
-        if (!seller) throw new BadRequestException("Seller ID is invalid");
-        if (seller) searchFilter.$and.push({ profileId: seller._id });
+        if (user.role === 'seller') {
+          const seller = await this.sellerRepository.findOne(profileId);
+          if (!seller) throw new BadRequestException("Seller ID is invalid");
+          if (seller) searchFilter.$and.push({ profileId: seller._id });
+        }
+      }
+    } else if (profileId && user.role === 'admin') {
+      // If admin user specifically requests trucks for a profile, handle that
+      // Check both transporter and seller profiles
+      const transporter = await this.transporterRepository.findOne(profileId).catch(() => null);
+      const seller = await this.sellerRepository.findOne(profileId).catch(() => null);
+
+      if (transporter) {
+        searchFilter.$and.push({ profileId: transporter._id });
+      } else if (seller) {
+        searchFilter.$and.push({ profileId: seller._id });
+      } else if (profileId) {
+        // Only throw error if profileId was actually provided
+        throw new BadRequestException("Profile ID is invalid");
       }
     }
 
@@ -143,7 +179,22 @@ export class TruckService {
       { truckNumber: { $regex: search, $options: 'i' } }
     );
 
-    if (status) searchFilter.$and.push({ status: { $regex: status, $options: 'i' } });
+    // if (status) searchFilter.$and.push({ status: { $regex: status, $options: 'i' } });
+
+    // Handle multiple statuses
+    if (status) {
+      // Split status by comma and trim whitespace
+      const statusArray = status.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+      if (statusArray.length === 1) {
+        // Single status - use regex for partial matching
+        searchFilter.$and.push({ status: { $regex: statusArray[0], $options: 'i' } });
+      } else if (statusArray.length > 1) {
+        // Multiple statuses - use $in operator for exact matching
+        searchFilter.$and.push({ status: { $in: statusArray } });
+      }
+    }
+
 
     if (depotHubId) {
       const depotHub = await this.depotHubRepository.findOne(depotHubId);
@@ -224,5 +275,99 @@ export class TruckService {
       });
     }
     return true
+  }
+
+  async updateTruckStatus(truckId: string, status: TruckStatus, user: IJwtPayload) {
+    const truck = await this.truckRepository.findOne(truckId);
+    if (!truck) {
+      throw new NotFoundException('Truck not found');
+    }
+
+    const previousStatus = truck.status;
+
+    // Get the truck owner's profile and user information
+    let ownerProfile: any;
+    let ownerUser: any;
+
+    if (truck.profileType === 'Transporter') {
+      ownerProfile = await this.transporterRepository.findOne(truck.profileId);
+    } else if (truck.profileType === 'Seller') {
+      ownerProfile = await this.sellerRepository.findOne(truck.profileId);
+    }
+
+    if (ownerProfile) {
+      ownerUser = await this.userRepository.findOne(ownerProfile.userId);
+    }
+
+    // Check if the user is the owner of the truck
+    const isOwner = ownerProfile && ownerUser && ownerUser._id.toString() === user.id;
+    const isAdmin = user.role === 'admin';
+
+    // If owner is updating status to 'pending', send email to admin
+    if (isOwner && status === 'pending') {
+      await this.sendAdminNotificationEmail(truck, ownerProfile, ownerUser, status);
+    }
+
+    // If admin is updating status to 'available' or 'locked', send email to owner
+    if (isAdmin && (status === 'available' || status === 'locked') && ownerUser) {
+      await this.sendOwnerStatusUpdateEmail(truck, ownerProfile, ownerUser, previousStatus, status);
+    }
+
+    // Update the truck status
+    const updatedTruck = await this.truckRepository.update(truckId, { ...truck, status });
+
+    return updatedTruck;
+  }
+
+  private async sendAdminNotificationEmail(truck: any, ownerProfile: any, ownerUser: any, requestedStatus: string) {
+    try {
+      const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@fuelsgate.com';
+      const adminDashboardUrl = `${process.env.FRONTEND_URL}/admin/trucks/${truck._id}`;
+
+      await this.mailService.sendMail({
+        to: adminEmail,
+        subject: 'Truck Status Update Request - Action Required',
+        template: join(__dirname, '../mails/truck-status-admin-notification'),
+        context: {
+          TruckOwner: `${ownerUser.firstName} ${ownerUser.lastName}`,
+          OwnerEmail: ownerUser.email,
+          TruckNumber: truck.truckNumber,
+          TruckCapacity: truck.capacity,
+          Depot: truck.depot,
+          CurrentStatus: truck.status,
+          RequestedStatus: requestedStatus,
+          AdminDashboardUrl: adminDashboardUrl,
+          RequestTime: new Date().toLocaleString(),
+        },
+      });
+    } catch (error) {
+      console.error('Error sending admin notification email:', error);
+      // Don't throw error to prevent breaking the main flow
+    }
+  }
+
+  private async sendOwnerStatusUpdateEmail(truck: any, ownerProfile: any, ownerUser: any, previousStatus: string, newStatus: string) {
+    try {
+      const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard/trucks`;
+
+      await this.mailService.sendMail({
+        to: ownerUser.email,
+        subject: `Truck Status Updated - ${truck.truckNumber}`,
+        template: join(__dirname, '../mails/truck-status-owner-notification'),
+        context: {
+          TruckOwner: `${ownerUser.firstName} ${ownerUser.lastName}`,
+          TruckNumber: truck.truckNumber,
+          TruckCapacity: truck.capacity,
+          Depot: truck.depot,
+          PreviousStatus: previousStatus,
+          NewStatus: newStatus,
+          DashboardUrl: dashboardUrl,
+          UpdateTime: new Date().toLocaleString(),
+        },
+      });
+    } catch (error) {
+      console.error('Error sending owner status update email:', error);
+      // Don't throw error to prevent breaking the main flow
+    }
   }
 }

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuelsgate | Truck Status Update Request</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet" />
+    <style>
+        * {
+            margin: 0px;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 24px;
+            font-weight: 500;
+        }
+
+        .margin {
+            margin-bottom: 15px;
+        }
+
+        .marginY {
+            margin-bottom: 15px;
+            margin-top: 15px;
+        }
+
+        td {
+            padding: auto 15px;
+        }
+
+        .salutation p {
+            margin-top: 10px !important;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Poppins', sans-serif; background-color: #f3f4f6; margin: 0; padding: 0;">
+    <table style="width: 100%; background-color: #f3f4f6; padding: 20px 0;">
+        <tr>
+            <td style="text-align: center;">
+                <table
+                    style="max-width: 600px; background-color: #ffffff; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <tr>
+                        <td
+                            style="padding: 30px 40px; text-align: center; background-color: #1f2937; border-radius: 8px 8px 0 0;">
+                            <img src="https://fuelsgate.com/assets/images/logo-white.png" alt="Fuelsgate Logo"
+                                style="max-width: 150px; height: auto;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h1
+                                style="color: #1f2937; font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center;">
+                                Truck Status Update Request
+                            </h1>
+
+                            <div class="salutation">
+                                <p class="margin" style="color: #374151;">Dear Admin,</p>
+                            </div>
+
+                            <p class="margin" style="color: #374151;">
+                                A truck owner has requested to update their truck status to "available" and requires
+                                admin approval.
+                            </p>
+
+                            <table
+                                style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9fafb; border-radius: 6px;">
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Truck Owner:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= TruckOwner %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Owner Email:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= OwnerEmail %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Truck Number:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= TruckNumber %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Truck Capacity:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= TruckCapacity %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Depot:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= Depot %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 15px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151;">
+                                        Current Status:</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                                        <%= CurrentStatus %>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px; font-weight: 600; color: #374151;">Requested Status:</td>
+                                    <td style="padding: 15px; color: #10b981; font-weight: 600;">
+                                        <%= RequestedStatus %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p class="margin" style="color: #374151;">
+                                Please review this request and take appropriate action through the admin dashboard.
+                            </p>
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="<%= AdminDashboardUrl %>"
+                                    style="background-color: #1f2937; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                                    Review in Admin Dashboard
+                                </a>
+                            </div>
+
+                            <p class="margin" style="color: #6b7280; font-size: 14px;">
+                                <strong>Request Time:</strong>
+                                <%= RequestTime %>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 20px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                This is an automated notification from Fuelsgate Admin System
+                            </p>
+                            <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">
+                                © <%= new Date().getFullYear() %> Fuelsgate. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

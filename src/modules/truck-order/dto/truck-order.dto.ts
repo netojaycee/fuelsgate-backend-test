@@ -26,6 +26,7 @@ export interface TruckOrderDto {
   destination?: string;
   state?: string;
   city?: string;
+  isRated?: boolean;
 }
 
 export interface TruckOrderQueryDto extends QueryDto {

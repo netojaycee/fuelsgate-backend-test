@@ -34,7 +34,7 @@ export class Truck {
   @Prop({ default: null })
   currentCity: string;
 
-  @Prop({ required: true, enum: ['available', 'locked'], default: 'available' })
+  @Prop({ required: true, enum: ['pending', 'available', 'locked'], default: 'pending' })
   status: string;
 }
 

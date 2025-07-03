@@ -91,7 +91,22 @@ export class TruckOrderRepository {
     return truckOrder;
   }
 
-  async update(orderId: string, orderData: TruckOrderDto) {
+  // async update(orderId: string, orderData: TruckOrderDto) {
+  //   const updatedTruckOrder = await this.truckOrderModel.findByIdAndUpdate(
+  //     orderId,
+  //     orderData,
+  //     { new: true, runValidators: true },
+  //   );
+
+  //   if (!updatedTruckOrder) {
+  //     throw new NotFoundException(`Truck order with ID ${orderId} not found.`);
+  //   }
+
+  //   return updatedTruckOrder;
+  // }
+
+  // suppor tfor partial update
+  async update(orderId: string, orderData: Partial<TruckOrderDto>) {
     const updatedTruckOrder = await this.truckOrderModel.findByIdAndUpdate(
       orderId,
       orderData,
