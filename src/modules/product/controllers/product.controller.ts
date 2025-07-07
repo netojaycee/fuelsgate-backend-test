@@ -3,11 +3,13 @@ import { ProductService } from "../services/product.service";
 import { productSchema } from "../validations/product.validation";
 import { YupValidationPipe } from "src/shared/pipes/yup-validation.pipe";
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Response } from "@nestjs/common";
+import { Public } from "src/shared/decorators/public.route.decorator";
 
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) { }
 
+  @Public()
   @Get()
   async getAll(
     @Query() query: ProductQueryDto,

@@ -1,13 +1,12 @@
 import { YupValidationPipe } from "src/shared/pipes/yup-validation.pipe";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Request, Response, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Request, Response } from "@nestjs/common";
 import { TruckService } from "../services/truck.service";
 import { TruckDto, TruckQueryDto } from "../dto/truck.dto";
 import { truckSchema, truckStatusSchema } from "../validations/truck.validation";
 import { AuditLog } from "src/shared/decorators/audit-log.decorator";
-import { JwtAuthGuard } from "src/shared/guards/jwt-auth.guard";
+import { Public } from "src/shared/decorators/public.route.decorator";
 
 @Controller('truck')
-@UseGuards(JwtAuthGuard)
 export class TruckController {
   constructor(private readonly truckService: TruckService) { }
 
@@ -19,6 +18,20 @@ export class TruckController {
   ): Promise<TruckDto[]> {
     const { user } = req
     const data = await this.truckService.getAllTrucks(query, user);
+    return res.status(200).json({
+      message: 'Trucks fetched successfully',
+      data,
+      statusCode: 200,
+    });
+  }
+
+  @Public()
+  @Get('public')
+  async getAllPublic(
+    @Query() query: TruckQueryDto,
+    @Response() res,
+  ): Promise<TruckDto[]> {
+    const data = await this.truckService.getAllPublicTrucks(query);
     return res.status(200).json({
       message: 'Trucks fetched successfully',
       data,

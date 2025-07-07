@@ -138,6 +138,66 @@ export class TruckService {
       totalPages: Math.ceil(total / limit),
     };
   }
+  async getAllPublicTrucks(query: TruckQueryDto) {
+   
+    const { page = 1, limit = 10, search, status, depotHubId, productId, size } = query;
+   
+    let offset = 0;
+    if (page && page > 0) {
+      offset = (page - 1) * limit;
+    }
+
+    const searchFilter: any = {
+      $or: [],
+      $and: [],
+    };
+
+    if (search) searchFilter.$or.push(
+      { companyName: { $regex: search, $options: 'i' } },
+      { phoneNumber: { $regex: search, $options: 'i' } },
+      { truckNumber: { $regex: search, $options: 'i' } }
+    );
+
+    // Handle multiple statuses
+    if (status) {
+      // Split status by comma and trim whitespace
+      const statusArray = status.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+      if (statusArray.length === 1) {
+        // Single status - use regex for partial matching
+        searchFilter.$and.push({ status: { $regex: statusArray[0], $options: 'i' } });
+      } else if (statusArray.length > 1) {
+        // Multiple statuses - use $in operator for exact matching
+        searchFilter.$and.push({ status: { $in: statusArray } });
+      }
+    }
+
+    if (depotHubId) {
+      const depotHub = await this.depotHubRepository.findOne(depotHubId)
+      if (depotHub) searchFilter.$and.push({ depotHubId: depotHub._id });
+    }
+
+    if (productId) {
+      const product = await this.productRepository.findOne(productId)
+      if (product) searchFilter.$and.push({ productId: product._id });
+    }
+
+    if (size) searchFilter.$and.push({ capacity: { $regex: size, $options: 'i' } });
+
+    // Clean up empty arrays
+    if (!searchFilter.$or.length) delete searchFilter.$or;
+    if (!searchFilter.$and.length) delete searchFilter.$and;
+
+    const trucks = await this.truckRepository.findAll(searchFilter, offset, limit);
+    const total = await this.truckRepository.getTotalTrucks(searchFilter);
+
+    return {
+      trucks,
+      total,
+      currentPage: page && page > 0 ? Number(page) : 1,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 
   async getUserTrucks(query: TruckQueryDto, user: IJwtPayload) {
     // Only sellers and transporters can have trucks

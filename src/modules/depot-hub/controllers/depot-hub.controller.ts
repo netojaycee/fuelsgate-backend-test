@@ -3,11 +3,13 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Response } from "@nest
 import { DepotHubService } from "../services/depot-hub.service";
 import { DepotHubDto } from "../dto/depot-hub.dto";
 import { depotHubSchema } from "../validations/depot-hub.validation";
+import { Public } from "src/shared/decorators/public.route.decorator";
 
 @Controller('depot-hub')
 export class DepotHubController {
   constructor(private readonly depotHubService: DepotHubService) { }
 
+  @Public()
   @Get()
   async getAll(
     @Response() res,
