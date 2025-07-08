@@ -174,11 +174,11 @@ export class TruckRepository {
     return await this.truckModel.findById(truckId).exec();
   }
 
-  async update(truckId: string | Types.ObjectId, truckData: TruckDto) {
+  async update(truckId: string | Types.ObjectId, truckData: Partial<TruckDto>) {
     try {
       const updatedTruck = await this.truckModel.findByIdAndUpdate(
         truckId,
-        truckData,
+        { $set: truckData },
         { new: true, runValidators: true },
       );
 

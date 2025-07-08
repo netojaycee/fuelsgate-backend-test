@@ -58,7 +58,7 @@ export class TruckOrderService {
       throw new BadRequestException('Please provide a profile type');
     }
 
-    const weekStart = startOfDay(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const weekStart = startOfDay(new Date(Date.now() - 20 * 24 * 60 * 60 * 1000));
     const weekEnd = endOfDay(new Date());
 
     let profile: any, buyer: any, order: any;
@@ -261,10 +261,18 @@ export class TruckOrderService {
     }
 
     return truckOrder;
-  }
-  async updateStatusOrder(truckOrderId: string, body: TruckOrderDto, type: 'rfq' | 'order') {
+    }
+    async updateStatusOrder(truckOrderId: string, body: TruckOrderDto, type: 'rfq' | 'order') {
     const order = await this.truckOrderRepository.update(truckOrderId, body);
     if (!order) throw new BadRequestException('Order ID is invalid');
+
+    // If rfqStatus is changed to accepted, update truck status to locked
+    if (type === 'rfq' && body.rfqStatus?.toLowerCase() === 'accepted') {
+      const truck = await this.truckRepository.findOne(order.truckId);
+      if (truck) {
+         await this.truckRepository.update(truck._id, { status: 'locked' });
+      }
+    }
 
     this.truckOrderGateway.broadcastOrderStatus(order);
 
@@ -272,7 +280,7 @@ export class TruckOrderService {
     await this.sendStatusUpdateEmail(order, type);
 
     return order;
-  }
+    }
 
   private async sendStatusUpdateEmail(order: any, type: 'rfq' | 'order') {
     try {
