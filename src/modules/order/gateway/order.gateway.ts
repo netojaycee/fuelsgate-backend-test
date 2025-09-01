@@ -1,61 +1,74 @@
-import {
-  SubscribeMessage,
-  WebSocketGateway,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketServer,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { IJwtPayload } from 'src/shared/strategies/jwt.strategy';
-import { forwardRef, Inject } from '@nestjs/common';
-import { OrderDto } from '../dto/order.dto';
-import { OrderService } from '../services/order.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { Server } from 'socket.io';
+import { SocketService } from 'src/modules/socket/socket.service';
+import { NotificationGateway } from 'src/modules/notification/gateway/notification.gateway';
+import { Types } from 'mongoose';
 
-@WebSocketGateway({ cors: true })
-export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
-  constructor(
-    @Inject(forwardRef(() => OrderService))
-    private orderService: OrderService
-  ) { }
+@Injectable()
+export class OrderGateway {
+    private logger = new Logger('OrderGateway');
+    private server: Server;
 
-  handleConnection(client: Socket) {
-    console.log('New client connected');
-    client.broadcast.emit('New client connected');
-  }
+    constructor(
+        private readonly socketService: SocketService,
+        private readonly notificationGateway: NotificationGateway,
+    ) {
+        this.server = this.socketService.getServer();
+    }
 
-  handleDisconnect(client: Socket) {
-    console.log('Client disconnected');
-    client.broadcast.emit('Client disconnected');
-  }
+    // Handle new order creation notification
+    async handleNewOrder(recipientId: string | Types.ObjectId, orderId: string | Types.ObjectId, orderType: 'product' | 'truck') {
+        const recipientObjectId = typeof recipientId === 'string' ? new Types.ObjectId(recipientId) : recipientId;
+        const orderObjectId = typeof orderId === 'string' ? new Types.ObjectId(orderId) : orderId;
 
-  @SubscribeMessage('sendOrder')
-  async handleOrder(client: Socket, payload: OrderDto, user: IJwtPayload) {
-    await this.orderService.createNewOrder(payload, user);
-    client.broadcast.emit('receiveOrder', payload);
-  }
+        if (orderType === 'product') {
+            await this.notificationGateway.handleNewProductOrder(recipientObjectId, orderObjectId);
+        } else if (orderType === 'truck') {
+            await this.notificationGateway.handleNewTruckOrder(recipientObjectId, orderObjectId);
+        }
 
-  broadcastOrder(payload: OrderDto, user: IJwtPayload) {
-    this.server.emit('receiveOrder', payload, user);
-  }
+        this.logger.log(`New ${orderType} order notification sent to user ${recipientId}`);
+    }
 
-  @SubscribeMessage('updateOrderStatus')
-  async handleOrderStatus(client: Socket, payload: OrderDto, orderId: string) {
-    await this.orderService.updateStatusOrder(orderId, payload);
-    client.broadcast.emit('updatedOrderStatus', payload);
-  }
+    // Handle order status change notification
+    async handleOrderStatusChange(
+        recipientId: string | Types.ObjectId,
+        orderId: string | Types.ObjectId,
+        orderType: 'product' | 'truck',
+        status: string
+    ) {
+        const recipientObjectId = typeof recipientId === 'string' ? new Types.ObjectId(recipientId) : recipientId;
+        const orderObjectId = typeof orderId === 'string' ? new Types.ObjectId(orderId) : orderId;
 
-  broadcastOrderStatus(payload: OrderDto) {
-    this.server.emit('updatedOrderStatus', payload);
-  }
+        if (orderType === 'product') {
+            await this.notificationGateway.handleProductOrderStatusUpdate(recipientObjectId, orderObjectId, status);
+        } else if (orderType === 'truck') {
+            await this.notificationGateway.handleTruckOrderStatusUpdate(recipientObjectId, orderObjectId, status);
+        }
 
-  @SubscribeMessage('updateOrderPrice')
-  async handleOrderPrice(client: Socket, payload: OrderDto, orderId: string) {
-    await this.orderService.updatePriceOrder(orderId, payload);
-    client.broadcast.emit('updatedOrderPrice', payload);
-  }
+        this.logger.log(`Order status change notification sent to user ${recipientId} for order ${orderId} - new status: ${status}`);
+    }
 
-  broadcastOrderPrice(payload: OrderDto) {
-    this.server.emit('updatedOrderPrice', payload);
-  }
+    // Handle order update based on description (for more specific notifications)
+    async handleOrderUpdate(
+        recipientId: string | Types.ObjectId,
+        orderId: string | Types.ObjectId,
+        orderType: 'product' | 'truck',
+        description: string,
+        additionalInfo?: { status?: string; rfqStatus?: string; price?: number; negotiationId?: Types.ObjectId }
+    ) {
+        const recipientObjectId = typeof recipientId === 'string' ? new Types.ObjectId(recipientId) : recipientId;
+        const orderObjectId = typeof orderId === 'string' ? new Types.ObjectId(orderId) : orderId;
+
+        // Use the NotificationGateway's custom order update method
+        await this.notificationGateway.handleCustomOrderUpdate(
+            recipientObjectId,
+            orderObjectId,
+            orderType,
+            description,
+            additionalInfo
+        );
+
+        this.logger.log(`Order update notification sent to user ${recipientId} for order ${orderId} - description: ${description}`);
+    }
 }

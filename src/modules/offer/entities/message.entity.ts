@@ -4,10 +4,10 @@ import { User } from "src/modules/user/entities/user.entity";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { MessageStatus } from "../dto/message.dto";
 
-export type MessageDocument = HydratedDocument<Message>;
+export type OfferMessageDocument = HydratedDocument<OfferMessage>;
 
 @Schema({ versionKey: false, timestamps: true })
-export class Message {
+export class OfferMessage {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   userId: Types.ObjectId;
 
@@ -24,4 +24,4 @@ export class Message {
   status: MessageStatus
 }
 
-export const MessageSchema = SchemaFactory.createForClass(Message);
+export const OfferMessageSchema = SchemaFactory.createForClass(OfferMessage);

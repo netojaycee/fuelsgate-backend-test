@@ -13,7 +13,6 @@ import { Order, OrderSchema } from '../order/entities/order.entity';
 import { Offer, OfferSchema } from '../offer/entities/offer.entity';
 import { TruckRepository } from '../truck/repositories/truck.repository';
 import { Truck, TruckSchema } from '../truck/entities/truck.entity';
-import { TruckOrder, TruckOrderSchema } from '../truck-order/entities/truck-order.entity';
 import { Transporter, TransporterSchema } from '../transporter/entities/transporter.entity';
 import { Seller, SellerSchema } from '../seller/entities/seller.entity';
 import { ProductRepository } from '../product/repositories/product.repository';
@@ -28,7 +27,6 @@ import { Product } from '../product/entities/product.entity';
       { name: Order.name, schema: OrderSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: Truck.name, schema: TruckSchema },
-      { name: TruckOrder.name, schema: TruckOrderSchema },
       { name: Transporter.name, schema: TransporterSchema },
       { name: Seller.name, schema: SellerSchema },
       { name: Product.name, schema: ProductSchema },
@@ -36,6 +34,6 @@ import { Product } from '../product/entities/product.entity';
   ],
   controllers: [BuyerController],
   providers: [BuyerService, BuyerRepository, ProductUploadRepository, TruckRepository, ProductRepository],
-  exports: [],
+  exports: [BuyerService],
 })
 export class BuyerModule { }

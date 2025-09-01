@@ -11,9 +11,8 @@ export class CreateRatingDto {
     @IsString()
     review?: string;
 
-    @IsOptional()
-    @IsMongoId()
-    truckOrderId?: string;
+    @IsString()
+    orderType?: 'truck' | 'product';
 
     @IsOptional()
     @IsMongoId()
@@ -35,7 +34,7 @@ export class RatingQueryDto {
 
     @IsOptional()
     @IsString()
-    orderType?: 'truck-order' | 'order';
+    orderType?: 'truck' | 'product';
 }
 
 export interface IRatingResponse {
@@ -49,8 +48,7 @@ export interface IRatingResponse {
     ratedUserId: string;
     rating: number;
     review: string;
-    orderType: string;
-    truckOrderId?: string;
+    orderType: 'truck' | 'product';
     orderId?: string;
     createdAt: Date;
     updatedAt: Date;

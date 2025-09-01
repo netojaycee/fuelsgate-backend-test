@@ -12,8 +12,11 @@ export class BuyerRepository {
     private buyerModel: Model<Buyer>,
   ) { }
 
-  async create(payload: BuyerDto) {
+  async create(payload: BuyerDto, options?: { session?: any }) {
     try {
+      if (options && options.session) {
+        return await new this.buyerModel(payload).save({ session: options.session });
+      }
       return await new this.buyerModel(payload).save();
     } catch (error) {
       if (error instanceof MongoServerError && error.code === 11000) {

@@ -6,9 +6,10 @@ export const errorResponse = (
   statusCode: number,
   res: Response,
 ) => {
-  return res.status(statusCode).json({
+  const formattedStatusCode = (statusCode ?? 500);
+  return res.status(formattedStatusCode).json({
     errors,
     message,
-    statusCode,
+    statusCode: formattedStatusCode,
   });
 };

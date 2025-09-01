@@ -16,6 +16,7 @@ export interface IUser {
 
 export interface IUserWithRole extends IUser {
   role: RoleType;
+  buyerData?: any;
 }
 
 export type UpdatePasswordDto = {

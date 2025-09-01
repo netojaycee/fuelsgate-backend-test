@@ -1,8 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { User } from 'src/modules/user/entities/user.entity';
-import { TruckOrder } from 'src/modules/truck-order/entities/truck-order.entity';
 import { Order } from 'src/modules/order/entities/order.entity';
+import { User } from 'src/modules/user/entities/user.entity';
 
 export type RatingDocument = HydratedDocument<Rating>;
 
@@ -22,13 +21,11 @@ export class Rating {
     @Prop({ default: null, maxlength: 500 })
     review: string; // Optional review text
 
-    @Prop({ type: Types.ObjectId, ref: TruckOrder.name, default: null })
-    truckOrderId: Types.ObjectId; // Reference to truck order
 
     @Prop({ type: Types.ObjectId, ref: Order.name, default: null })
     orderId: Types.ObjectId; // Reference to regular order
 
-    @Prop({ required: true, enum: ['truck-order', 'order'] })
+    @Prop({ required: true, enum: ['truck', 'order'] })
     orderType: string; // Type of order this rating is for
 
     @Prop({ default: false })

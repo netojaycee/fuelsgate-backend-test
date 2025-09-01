@@ -31,6 +31,7 @@ export class TruckController {
     @Query() query: TruckQueryDto,
     @Response() res,
   ): Promise<TruckDto[]> {
+    console.log(query, "query for truck")
     const data = await this.truckService.getAllPublicTrucks(query);
     return res.status(200).json({
       message: 'Trucks fetched successfully',
@@ -90,10 +91,12 @@ export class TruckController {
   async update(
     @Body(new YupValidationPipe(truckSchema)) body: TruckDto,
     @Param() param,
+    @Request() req,
     @Response() res
   ): Promise<TruckDto> {
     const { truckId } = param;
-    const data = await this.truckService.updateTruckData(truckId, body);
+    const { user } = req;
+    const data = await this.truckService.updateTruckData(truckId, body, user);
     return res.status(200).json({
       message: 'Truck updated successfully',
       data,

@@ -1,0 +1,83 @@
+<%- include('shared/header') %>
+
+    <div
+        style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #dc3545; margin: 0; font-size: 28px;">❌ Negotiation Cancelled</h1>
+            </div>
+
+            <div
+                style="background-color: #f8d7da; padding: 20px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid #dc3545;">
+                <h2 style="color: #721c24; margin-top: 0; font-size: 20px;">Negotiation Update</h2>
+                <p style="color: #721c24; margin: 0; font-size: 16px; line-height: 1.6;">
+                    Your negotiation for <strong>
+                        <%= Type %>
+                    </strong> has been cancelled.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">📋 Cancellation Details</h3>
+                <table style="width: 100%; border-collapse: collapse; background-color: #f8f9fa;">
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Order ID:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6; color: #333;">
+                            <%= orderId %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Reason:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6; color: #333;">
+                            <%= reason || 'Another negotiation was accepted' %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Cancelled Date:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6; color: #333;">
+                            <%= new Date().toLocaleDateString('en-NG') %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Status:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6;">
+                            <span
+                                style="background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px;">CANCELLED</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div
+                style="background-color: #d1ecf1; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid #17a2b8;">
+                <h4 style="color: #0c5460; margin-top: 0; font-size: 16px;">💡 What happens next?</h4>
+                <p style="color: #0c5460; margin: 0; font-size: 14px; line-height: 1.5;">
+                    Don't worry! You can create new negotiations for other available orders. Check your dashboard for
+                    new opportunities.
+                </p>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="<%= dashboardUrl %>"
+                    style="background-color: #17a2b8; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                    Browse New Orders
+                </a>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                    Thank you for using FuelsGate! Keep exploring new opportunities.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <%- include('shared/footer') %>

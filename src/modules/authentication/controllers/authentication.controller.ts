@@ -48,6 +48,14 @@ export class AuthenticationController {
         password,
       );
 
+      // Prevent login for sellers
+      if (data.user.role === 'seller') {
+        return res.status(403).json({
+          message: 'Login for sellers is not allowed.',
+          statusCode: 403,
+        });
+      }
+
       if (data.user.status === 'pending') {
         return res.status(403).json({
           message: '🔒 Account not activated. Please contact admin to activate your account.',
@@ -87,43 +95,83 @@ export class AuthenticationController {
     @Response() res,
   ): Promise<IUserWithRole | any> {
     try {
-      // console.log(`Registering user with data:`, registerData);
-      await this.userService.createNew(registerData);
+      console.log('Registration attempt for role:', registerData.role);
 
-      // If role is transporter, just return registration success
+      // Prevent registration for role 'seller'
+      if (registerData.role === 'seller') {
+        return res.status(403).json({
+          message: 'Registration for sellers is not allowed.',
+          statusCode: 403,
+        });
+      }
+
+      // Prevent registration for role 'admin' (admins should be created by other admins)
+      if (registerData.role === 'admin') {
+        return res.status(403).json({
+          message: 'Admin registration through this endpoint is not allowed.',
+          statusCode: 403,
+        });
+      }
+
+      // If role is transporter, just create user and return registration success
       if (registerData.role === 'transporter') {
-      return res.status(200).json({
-        message: 'User registration successfully',
-        data: { role: registerData.role },
-        statusCode: 200,
-      });
+        console.log('Creating transporter user...');
+        await this.userService.createNew(registerData);
+        console.log('Transporter user created successfully');
+        return res.status(200).json({
+          message: 'Transporter registration successful. Your account is pending approval.',
+          data: { role: registerData.role },
+          statusCode: 200,
+        });
       }
 
-      // For other roles, attempt login and return current response
-      const data = await this.authenticationService.validateUser(
-      registerData.email,
-      registerData.password,
-      );
-
+      // For buyers, atomic registration is handled in the service
       if (registerData.role === 'buyer') {
-      const buyerData = await this.buyerService.saveNewBuyerInfo({category: 'reseller', userId: data.user._id}, data.user);
-      return res.status(200).json({
-        message: 'Buyer Information saved successfully',
-        data: {
-        ...data,
-        buyerData
-        },
-        statusCode: 200,
-      });
+        console.log('Creating buyer user...');
+        try {
+          const user = await this.userService.createNew(registerData);
+          console.log('Buyer user created, attempting login...');
+
+          if (!user || !user._id) {
+            throw new Error('User creation failed');
+          }
+          if (user.role !== 'buyer') {
+            throw new Error('Role must be buyer');
+          }
+
+          // Attempt login and return response
+          const data = await this.authenticationService.validateUser(registerData.email, registerData.password);
+          console.log('Buyer login successful');
+
+          return res.status(200).json({
+            message: 'Buyer registration and login successful',
+            data: {
+              ...data,
+              buyerData: user.buyerData
+            },
+            statusCode: 200,
+          });
+        } catch (err) {
+          console.error('Buyer registration error:', err);
+          return res.status(500).json({
+            message: 'Registration failed: ' + (err.message || 'Unknown error'),
+            statusCode: 500,
+          });
+        }
       }
 
-      return res.status(200).json({
-      message: 'User registration successfully',
-      data,
-      statusCode: 200,
-      });
+      // For any other unhandled roles
+      // console.log('Unknown role, falling back to basic user creation...');
+      // await this.userService.createNew(registerData);
+      // const data = await this.authenticationService.validateUser(registerData.email, registerData.password);
+      // return res.status(200).json({
+      //   message: 'User registration successfully',
+      //   data,
+      //   statusCode: 200,
+      // });
     } catch (error) {
-      return errorResponse(error.response, error.message, error.status, res);
+      console.error('Registration controller error:', error);
+      return errorResponse(error.response, error.message, error.status || 500, res);
     }
   }
   @Public()

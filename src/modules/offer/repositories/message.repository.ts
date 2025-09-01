@@ -2,12 +2,12 @@ import { InjectModel } from "@nestjs/mongoose";
 import { MessageDto } from "../dto/message.dto";
 import { isValidObjectId, Model } from "mongoose";
 import { NotFoundException } from "@nestjs/common";
-import { Message } from "../entities/message.entity";
+import { OfferMessage } from "../entities/message.entity";
 
 export class MessageRepository {
   constructor(
-    @InjectModel(Message.name)
-    private messageModel: Model<Message>,
+    @InjectModel(OfferMessage.name)
+    private messageModel: Model<OfferMessage>,
   ) { }
 
   async findAll(searchFilter: unknown, offset: number, limit: number) {

@@ -3,15 +3,15 @@ import { Offer } from '../entities/offer.entity';
 import { isValidObjectId, Model, PipelineStage, Types } from 'mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { OfferDto } from 'src/modules/offer/dto/offer.dto';
-import { Message } from '../entities/message.entity';
+import { OfferMessage } from '../entities/message.entity';
 @Injectable()
 export class OfferRepository {
   constructor(
     @InjectModel(Offer.name)
     private offerModel: Model<Offer>,
-    @InjectModel(Message.name)
-    private messageModel: Model<Message>,
-  ) {}
+    @InjectModel(OfferMessage.name)
+    private messageModel: Model<OfferMessage>,
+  ) { }
 
   async findAll(searchFilter: PipelineStage[], offset: number, limit: number) {
     const _limit = parseInt(limit.toString());

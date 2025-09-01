@@ -1,5 +1,8 @@
 import * as moment from 'moment';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
+
 import {
   endOfDay,
   endOfWeek,
@@ -146,4 +149,72 @@ export const getDates = (date: string) => {
   }
 
   return { startDate, endDate };
+};
+
+
+export function getHtmlWithFooter(html: string): string {
+  const footerHtml = fs.readFileSync(path.join(__dirname, '../templates/shared/email-footer.html'), 'utf8');
+  // Replace placeholder or append footer
+  if (html.includes('{{footer_html}}')) {
+    return html.replace(/{{footer_html}}/g, footerHtml);
+  }
+  return html + footerHtml;
+}
+
+export const supplierEmails = [
+  "milton24@mailinator.com",
+  "dikevivian77@gmail.com",
+  "jbh4lyf@gmail.com",
+  "benard@omsaservices.com",
+  "oshinmadeolalekan@gmail.com",
+  "samsonobjosephk1@gmail.com",
+  "ekpedekumopresey@gmail.com",
+  "taofik.otiotio@gmail.com",
+  "austine.elumeze@gmail.com",
+  "kenchyke2@yahoo.com",
+  "jeksbrook@gmail.com",
+  "m2cu700i@gmail.com",
+  "wunmi@3lc.com.ng",
+  "violet.agbo@nepalgroupng.com",
+  "olanrewaju.akinmoladun@africaterminals.com",
+  "slycomng@yahoo.com",
+  "pic.ltd@outlook.com",
+  "rotopresourcesltd@gmail.com",
+  "akannitoluwaloju@gmail.com",
+  "latox06@gmail.com",
+  "omoefunwole@live.com",
+  "ogasunnymba@gmail.com",
+  "paulobande7@gmail.com",
+  "davidonah43@gmail.com",
+  "olumidejohnson.copypro@gmail.com",
+  "kokoxng@yahoo.com",
+  "waheedshittu205@yahoo.com",
+  "boaz.commodities@gmail.com",
+  "onwumadubem0@gmail.com",
+  "josephokoro01@gmail.com",
+  "emekaonuchukwu@yahoo.com",
+  "ojiworld008@live.com",
+  "dekzycool123@gmail.com",
+  "pytinu@gmail.com",
+  "okeydesmond@yahoo.com",
+  "jekstarenergy@gmail.com",
+  "larrie29@yahoo.com",
+  "seyebunmi@yahoo.com",
+  "goldenzion123@gmail.com",
+  "qamar.aliu@rankine-energy.com",
+  "olumiluwa2013@gmail.com",
+  "chiscoenergy@chiscogroupng.com",
+  "joeed7@gmail.com",
+  "amod47123@gmail.com",
+  "ojsenergy@gmail.com",
+  "kmoneyforanis@gmail.com",
+  "maqlou7@gmail.com",
+  "victoriaijeomaohakim@gmail.com",
+  "constantineohakim@gmail.com",
+  "chikeokoroafor@yahoo.co.uk",
+];
+
+export const demoLinks = {
+  trader: `<a href="https://fuelsgate.com/demo/trader" style="color:#b1976b; font-style:italic; text-decoration:underline;" target="_blank">Watch the Trader Demo</a>`,
+  transporter: `<a href="https://fuelsgate.com/demo/transporter" style="color:#b1976b; font-style:italic; text-decoration:underline;" target="_blank">Watch the Transporter Demo</a>`,
 };

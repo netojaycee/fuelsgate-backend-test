@@ -4,7 +4,7 @@ import { PlatformConfigController } from './controllers/platform-config.controll
 import { PlatformConfigService } from './services/platform-config.service';
 import { PlatformConfigRepository } from './repositories/platform-config.repository';
 import { PlatformConfig, PlatformConfigSchema } from './entities/platform-config.entity';
-import { PlatformConfigSeedService } from './seeders/platform-config.seeder';
+// import { PlatformConfigSeedService } from './seeders/platform-config.seeder';
 
 @Module({
     imports: [
@@ -16,7 +16,7 @@ import { PlatformConfigSeedService } from './seeders/platform-config.seeder';
     providers: [
         PlatformConfigService,
         PlatformConfigRepository,
-        PlatformConfigSeedService,
+        // PlatformConfigSeedService,
     ],
     exports: [PlatformConfigService, PlatformConfigRepository],
 })

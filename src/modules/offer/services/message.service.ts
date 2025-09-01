@@ -12,8 +12,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { join } from 'path';
-import { MailerService } from '@nestjs-modules/mailer';
 import { formatNumber } from 'src/utils/helpers';
+import { ResendService } from 'src/modules/resend/resend.service';
 
 @Injectable()
 export class MessageService {
@@ -23,8 +23,8 @@ export class MessageService {
     private readonly offerRepository: OfferRepository,
     @Inject(forwardRef(() => MessageGateway))
     private readonly messageGateway: MessageGateway,
-    private readonly mailService: MailerService,
-  ) {}
+    private readonly resendService: ResendService,
+  ) { }
 
   async sendMessage(messageBody: MessageDto, user: IJwtPayload) {
     const [sender, offer] = await Promise.all([
@@ -67,10 +67,10 @@ export class MessageService {
       recipientName = `${(offer.senderId as any)?.firstName} ${(offer.senderId as any)?.lastName}`;
     }
 
-    this.mailService.sendMail({
+    await this.resendService.sendMail({
       to: recipientEmail,
       subject,
-      template: join(__dirname, '../mails/new-offer'),
+      template: join(__dirname, '../mails/new-offer.ejs'),
       context: {
         Sender: senderName,
         Recipient: recipientName,
@@ -158,10 +158,10 @@ export class MessageService {
       recipientName = `${(offer.senderId as any)?.firstName} ${(offer.senderId as any)?.lastName}`;
     }
 
-    this.mailService.sendMail({
+    await this.resendService.sendMail({
       to: recipientEmail,
       subject,
-      template: join(__dirname, '../mails/offer-status'),
+      template: join(__dirname, '../mails/offer-status.ejs'),
       context: {
         Sender: senderName,
         Recipient: recipientName,

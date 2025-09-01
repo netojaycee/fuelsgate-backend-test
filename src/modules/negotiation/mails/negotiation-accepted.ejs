@@ -1,0 +1,92 @@
+<%- include('shared/header') %>
+
+    <div
+        style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #2c5aa0; margin: 0; font-size: 28px;">🎉 Negotiation Accepted!</h1>
+            </div>
+
+            <div
+                style="background-color: #e8f4fd; padding: 20px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid #2c5aa0;">
+                <h2 style="color: #2c5aa0; margin-top: 0; font-size: 20px;">Great News!</h2>
+                <p style="color: #333; margin: 0; font-size: 16px; line-height: 1.6;">
+                    Your negotiation for <strong>
+                        <%= orderType %>
+                    </strong> has been accepted by <strong>
+                        <%= acceptedBy %>
+                    </strong>.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #333; font-size: 18px; margin-bottom: 15px;">📋 Order Details</h3>
+                <table style="width: 100%; border-collapse: collapse; background-color: #f8f9fa;">
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Order ID:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6; color: #333;">
+                            <%= orderId %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Final Price:</td>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; color: #28a745; font-weight: bold; font-size: 18px;">
+                            ₦<%= finalPrice.toLocaleString() %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Accepted Date:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6; color: #333;">
+                            <%= new Date().toLocaleDateString('en-NG') %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td
+                            style="padding: 12px; border: 1px solid #dee2e6; background-color: #e9ecef; font-weight: bold; color: #495057;">
+                            Status:</td>
+                        <td style="padding: 12px; border: 1px solid #dee2e6;">
+                            <span
+                                style="background-color: #28a745; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px;">ACCEPTED</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div
+                style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
+                <h4 style="color: #856404; margin-top: 0; font-size: 16px;">⚠️ Important Notice</h4>
+                <p style="color: #856404; margin: 0; font-size: 14px; line-height: 1.5;">
+                    <% if (competingNegotiations && competingNegotiations.length> 0) { %>
+                        As a result of this acceptance, <strong>
+                            <%= competingNegotiations.length %>
+                        </strong> competing negotiation(s) have been automatically cancelled.
+                        <% } else { %>
+                            This negotiation has been successfully accepted. You can now proceed with the order
+                            fulfillment.
+                            <% } %>
+                </p>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="<%= dashboardUrl %>"
+                    style="background-color: #2c5aa0; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                    View Order Details
+                </a>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                    Thank you for using FuelsGate! For any questions, contact our support team.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <%- include('shared/footer') %>

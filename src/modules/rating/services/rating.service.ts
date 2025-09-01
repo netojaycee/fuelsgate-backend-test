@@ -7,7 +7,6 @@ import {
 import { RatingRepository } from '../repositories/rating.repository';
 import { CreateRatingDto, RatingQueryDto, IUserRatingStats } from '../dto/rating.dto';
 import { IJwtPayload } from 'src/shared/strategies/jwt.strategy';
-import { TruckOrderRepository } from 'src/modules/truck-order/repositories/truck-order.repository';
 import { OrderRepository } from 'src/modules/order/repositories/order.repository';
 import { UserRepository } from 'src/modules/user/repositories/user.repository';
 import { BuyerRepository } from 'src/modules/buyer/repositories/buyer.repository';
@@ -18,7 +17,6 @@ import { TransporterRepository } from 'src/modules/transporter/repositories/tran
 export class RatingService {
     constructor(
         private ratingRepository: RatingRepository,
-        private truckOrderRepository: TruckOrderRepository,
         private orderRepository: OrderRepository,
         private userRepository: UserRepository,
         private buyerRepository: BuyerRepository,
@@ -27,19 +25,18 @@ export class RatingService {
     ) { }
 
     async createRating(body: CreateRatingDto, user: IJwtPayload) {
-        const { rating, review, truckOrderId, orderId } = body;
+        const { rating, review, orderId, orderType } = body;
 
         // Validate that either truckOrderId or orderId is provided (but not both)
-        if ((!truckOrderId && !orderId) || (truckOrderId && orderId)) {
+        if (!orderId) {
             throw new BadRequestException(
-                'Please provide either truckOrderId or orderId, but not both',
+                'Please provide orderId',
             );
         }
 
         // Check if user has already rated for this order
         const existingRating = await this.ratingRepository.findExistingRating(
             user.id,
-            truckOrderId,
             orderId,
         );
 
@@ -50,7 +47,7 @@ export class RatingService {
         }
 
         // Get the user to be rated based on the order
-        const ratedUserId = await this.getRatedUserFromOrder(user.id, truckOrderId, orderId);
+        const ratedUserId = await this.getRatedUserFromOrder(user.id, orderId);
 
         // Create the rating
         const ratingData = {
@@ -58,9 +55,8 @@ export class RatingService {
             ratedUserId,
             rating,
             review: review || null,
-            truckOrderId: truckOrderId || null,
-            orderId: orderId || null,
-            orderType: truckOrderId ? 'truck-order' : 'order',
+            orderId,
+            orderType,
         };
 
         try {
@@ -70,10 +66,8 @@ export class RatingService {
             await this.updateUserAverageRating(ratedUserId);
 
             // Update the isRated flag on the corresponding order or truck order
-            if (truckOrderId) {
-                await this.truckOrderRepository.update(truckOrderId, { isRated: true });
-            } else if (orderId) {
-                await this.orderRepository.update(orderId, { isRated: true });
+            if (orderId) {
+                await this.orderRepository.updateOrder(orderId, { isRated: true, type: orderType });
             }
 
             return newRating;
@@ -241,57 +235,10 @@ export class RatingService {
 
     private async getRatedUserFromOrder(
         raterId: string,
-        truckOrderId?: string,
-        orderId?: string,
-    ): Promise<string> {
-        if (truckOrderId) {
-            return this.getRatedUserFromTruckOrder(raterId, truckOrderId);
-        } else if (orderId) {
-            return this.getRatedUserFromRegularOrder(raterId, orderId);
-        }
-        throw new BadRequestException('No valid order ID provided');
-    }
+        orderId: string,
+    ): Promise<any> {
 
-    private async getRatedUserFromTruckOrder(raterId: string, truckOrderId: string): Promise<string> {
-        const truckOrder = await this.truckOrderRepository.findOne(truckOrderId);
-        if (!truckOrder) {
-            throw new NotFoundException('Truck order not found');
-        }
-
-        // Check if the order is completed
-        if (truckOrder.status !== 'completed') {
-            throw new BadRequestException('You can only rate after the order is completed');
-        }
-        console.log(truckOrder.profileType, truckOrder.profileId._id.toString(), truckOrder.buyerId._id.toString());
-        // Get buyer and profile information
-        const [buyer, profile] = await Promise.all([
-            this.buyerRepository.findOne(truckOrder.buyerId._id.toString()),
-            truckOrder.profileType === 'Transporter'
-                ? this.transporterRepository.findOne(truckOrder.profileId._id.toString())
-                : this.sellerRepository.findOne(truckOrder.profileId._id.toString()),
-        ]);
-        console.log(buyer, profile);
-        if (!buyer || !profile) {
-            throw new NotFoundException('Order participants not found');
-        }
-
-        const buyerUserId = buyer.userId.toString();
-        const profileUserId = profile.userId.toString();
-
-        // Determine who should be rated based on who is rating
-        if (raterId === buyerUserId) {
-            // Buyer is rating the truck owner/transporter
-            return profileUserId;
-        } else if (raterId === profileUserId) {
-            // Truck owner/transporter is rating the buyer
-            return buyerUserId;
-        } else {
-            throw new ForbiddenException('You are not part of this truck order');
-        }
-    }
-
-    private async getRatedUserFromRegularOrder(raterId: string, orderId: string): Promise<string> {
-        const order = await this.orderRepository.findOne(orderId);
+        const order = await this.orderRepository.findOrderById(orderId);
         if (!order) {
             throw new NotFoundException('Order not found');
         }
@@ -373,6 +320,45 @@ export class RatingService {
             totalUsersUpdated: updated,
         };
     }
+
+    // private async getRatedUserFromTruckOrder(raterId: string, truckOrderId: string): Promise<string> {
+    //     const truckOrder = await this.truckOrderRepository.findOne(truckOrderId);
+    //     if (!truckOrder) {
+    //         throw new NotFoundException('Truck order not found');
+    //     }
+
+    //     // Check if the order is completed
+    //     if (truckOrder.status !== 'completed') {
+    //         throw new BadRequestException('You can only rate after the order is completed');
+    //     }
+    //     console.log(truckOrder.profileType, truckOrder.profileId._id.toString(), truckOrder.buyerId._id.toString());
+    //     // Get buyer and profile information
+    //     const [buyer, profile] = await Promise.all([
+    //         this.buyerRepository.findOne(truckOrder.buyerId._id.toString()),
+    //         truckOrder.profileType === 'transporter'
+    //             ? this.transporterRepository.findOne(truckOrder.profileId._id.toString())
+    //             : this.sellerRepository.findOne(truckOrder.profileId._id.toString()),
+    //     ]);
+    //     console.log(buyer, profile);
+    //     if (!buyer || !profile) {
+    //         throw new NotFoundException('Order participants not found');
+    //     }
+
+    //     const buyerUserId = buyer.userId.toString();
+    //     const profileUserId = profile.userId.toString();
+
+    //     // Determine who should be rated based on who is rating
+    //     if (raterId === buyerUserId) {
+    //         // Buyer is rating the truck owner/transporter
+    //         return profileUserId;
+    //     } else if (raterId === profileUserId) {
+    //         // Truck owner/transporter is rating the buyer
+    //         return buyerUserId;
+    //     } else {
+    //         throw new ForbiddenException('You are not part of this truck order');
+    //     }
+    // }
+
 
     /**
      * Manual method to recalculate a specific user's average rating

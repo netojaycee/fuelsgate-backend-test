@@ -7,7 +7,6 @@ import { ProductUploadRepository } from 'src/modules/product-upload/repositories
 import { TruckRepository } from 'src/modules/truck/repositories/truck.repository';
 import { ProductRepository } from 'src/modules/product/repositories/product.repository';
 import { OfferRepository } from 'src/modules/offer/repositories/offer.repository';
-import { TruckOrderRepository } from 'src/modules/truck-order/repositories/truck-order.repository';
 import { OrderRepository } from 'src/modules/order/repositories/order.repository';
 import { DepotHubRepository } from 'src/modules/depot-hub/repositories/depot-hub.repository';
 import { getDates } from 'src/utils/helpers';
@@ -20,11 +19,10 @@ export class AdminService {
     private productUploadRepository: ProductUploadRepository,
     private truckRepository: TruckRepository,
     private offerRepository: OfferRepository,
-    private truckOrderRepository: TruckOrderRepository,
     private orderRepository: OrderRepository,
     private productRepository: ProductRepository,
     private depotHubRepository: DepotHubRepository,
-  ) {}
+  ) { }
 
   async saveNewAdminInfo(adminData: AdminDto, user: IJwtPayload) {
     if (user.role !== 'admin') {
@@ -49,7 +47,6 @@ export class AdminService {
       totalUploadedProducts,
       totalTrucks,
       totalOffers,
-      totalTruckOrders,
       totalProductOrders,
       totalProducts,
       totalDepots,
@@ -58,8 +55,7 @@ export class AdminService {
       this.productUploadRepository.getTotalProductUploads({}),
       this.truckRepository.getTotalTrucks({}),
       this.offerRepository.getTotal({}),
-      this.truckOrderRepository.getTotal({}),
-      this.orderRepository.getTotal({}),
+      this.orderRepository.countOrders({}),
       this.productRepository.getTotalProducts({}),
       this.depotHubRepository.getTotal({}),
     ]);
@@ -69,7 +65,6 @@ export class AdminService {
       totalUploadedProducts,
       totalTrucks,
       totalOffers,
-      totalTruckOrders,
       totalProductOrders,
       totalProducts,
       totalDepots,
@@ -83,7 +78,7 @@ export class AdminService {
 
     const { startDate, endDate } = getDates(date);
 
-    const [users, productsUploads, truckOrders, offers, productOrders] =
+    const [users, productsUploads, offers, productOrders] =
       await Promise.all([
         this.userRepository.getTotalUsers({
           createdAt: {
@@ -97,19 +92,13 @@ export class AdminService {
             $lte: endDate,
           },
         }),
-        this.truckOrderRepository.getTotal({
-          createdAt: {
-            $gte: startDate,
-            $lte: endDate,
-          },
-        }),
         this.offerRepository.getTotal({
           createdAt: {
             $gte: startDate,
             $lte: endDate,
           },
         }),
-        this.orderRepository.getTotal({
+        this.orderRepository.countOrders({
           createdAt: {
             $gte: startDate,
             $lte: endDate,
@@ -120,7 +109,6 @@ export class AdminService {
     return {
       users,
       productsUploads,
-      truckOrders,
       offers,
       productOrders,
     };
@@ -163,7 +151,7 @@ export class AdminService {
 
     const { startDate, endDate } = getDates(date);
 
-    return await this.orderRepository.findAll({
+    return await this.orderRepository.findOrders({
       createdAt: {
         $gte: startDate,
         $lte: endDate,
@@ -171,18 +159,18 @@ export class AdminService {
     });
   }
 
-  async getTruckOrderDataByDate(user: IJwtPayload, date: string) {
-    if (user.role !== 'admin') {
-      throw new ForbiddenException('Unauthorized Access');
-    }
+  // async getTruckOrderDataByDate(user: IJwtPayload, date: string) {
+  //   if (user.role !== 'admin') {
+  //     throw new ForbiddenException('Unauthorized Access');
+  //   }
 
-    const { startDate, endDate } = getDates(date);
+  //   const { startDate, endDate } = getDates(date);
 
-    return await this.truckOrderRepository.findAll({
-      createdAt: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    });
-  }
+  //   return await this.truckOrderRepository.findAll({
+  //     createdAt: {
+  //       $gte: startDate,
+  //       $lte: endDate,
+  //     },
+  //   });
+  // }
 }

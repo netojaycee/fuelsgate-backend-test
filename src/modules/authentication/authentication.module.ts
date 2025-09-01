@@ -35,11 +35,9 @@ import { ProductRepository } from '../product/repositories/product.repository';
 import { Product, ProductSchema } from '../product/entities/product.entity';
 import { ProductUploadRepository } from '../product-upload/repositories/product-upload.repository';
 import { ProductUpload, ProductUploadSchema } from '../product-upload/entities/product-upload.entity';
-import { Order, OrderSchema } from '../order/entities/order.entity';
 import { Offer, OfferSchema } from '../offer/entities/offer.entity';
 import { TruckRepository } from '../truck/repositories/truck.repository';
 import { Truck, TruckSchema } from '../truck/entities/truck.entity';
-import { TruckOrder, TruckOrderSchema } from '../truck-order/entities/truck-order.entity';
 // import { GoogleStrategy } from 'src/shared/strategies/google-oauth.strategy';
 // import { GoogleOauthGuard } from 'src/shared/guards/google-oauth.guard';
 import { GoogleAuthService } from './services/google-auth.service';
@@ -50,6 +48,8 @@ import { UserModule } from '../user/user.module';
 import { AdminRepository } from '../admin/repositories/admin.repository';
 import { Admin } from '../admin/entities/admin.entity';
 import { AdminSchema } from '../admin/entities/admin.entity';
+import { ResendModule } from '../resend/resend.module';
+import { Order, OrderSchema } from '../order/entities/order.entity';
 
 @Module({
   imports: [
@@ -73,14 +73,13 @@ import { AdminSchema } from '../admin/entities/admin.entity';
       { name: Order.name, schema: OrderSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: Truck.name, schema: TruckSchema },
-      { name: TruckOrder.name, schema: TruckOrderSchema },
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     UserModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
-    }),
+    }), ResendModule
 
   ],
   controllers: [AuthenticationController, GoogleAuthController],

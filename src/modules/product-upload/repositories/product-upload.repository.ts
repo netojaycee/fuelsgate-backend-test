@@ -22,7 +22,7 @@ export class ProductUploadRepository {
     private orderModel: Model<Order>,
     @InjectModel(Offer.name)
     private offerModel: Model<Offer>,
-  ) {}
+  ) { }
 
   async findAll(
     searchFilter: unknown,

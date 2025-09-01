@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>New Counter-Offer for Negotiation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f9f9f9;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+        }
+
+        h2 {
+            color: #007bff;
+        }
+
+        .details {
+            margin: 24px 0;
+        }
+
+        .details strong {
+            color: #555;
+        }
+
+        .cta {
+            margin-top: 32px;
+        }
+
+        .cta a {
+            background: #007bff;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>New Counter-Offer Received</h2>
+        <p>Hello <%= Recipient %>,</p>
+        <p><strong>
+                <%= Sender %>
+            </strong> has sent you a counter-offer for your negotiation.</p>
+        <div class="details">
+            <p><strong>Negotiation Type:</strong>
+                <%= Type %>
+            </p>
+            <p><strong>Negotiation ID:</strong>
+                <%= NegotiationId %>
+            </p>
+            <p><strong>Order ID:</strong>
+                <%= OrderId %>
+            </p>
+            <p><strong>Counter-Offer Price:</strong>
+                <%= OfferPrice %>
+            </p>
+            <p><strong>Time:</strong>
+                <%= Time %>
+            </p>
+        </div>
+        <div class="cta">
+            <a href="<%= NegotiationUrl %>">View Negotiation</a>
+        </div>
+        <p style="margin-top:40px; color:#888; font-size:13px;">This is an automated message from Fuelsgate. Please do
+            not reply directly to this email.</p>
+    </div>
+</body>
+
+</html>

@@ -16,6 +16,7 @@ import {
 import { UserRepository } from '../user/repositories/user.repository';
 import { User, UserSchema } from '../user/entities/user.entity';
 import { UserRole, UserRoleSchema } from '../role/entities/user-role.entities';
+import { Transporter, TransporterSchema } from '../transporter/entities/transporter.entity';
 
 @Module({
   imports: [
@@ -26,7 +27,9 @@ import { UserRole, UserRoleSchema } from '../role/entities/user-role.entities';
       { name: Order.name, schema: OrderSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: User.name, schema: UserSchema },
-      { name: UserRole.name, schema: UserRoleSchema }
+      { name: UserRole.name, schema: UserRoleSchema },
+      { name: Transporter.name, schema: TransporterSchema },
+      { name: Seller.name, schema: SellerSchema }
     ]),
   ],
   controllers: [SellerController],

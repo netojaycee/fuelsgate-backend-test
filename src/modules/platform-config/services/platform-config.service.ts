@@ -15,8 +15,8 @@ import {
 @Injectable()
 export class PlatformConfigService {
     // Default service fee percentages if not set
-    private readonly DEFAULT_TRANSPORTER_FEE = 5; // 5%
-    private readonly DEFAULT_TRADER_FEE = 3; // 3%
+    // private readonly DEFAULT_TRANSPORTER_FEE = 5; // 5%
+    // private readonly DEFAULT_TRADER_FEE = 3; // 3%
 
     // Config keys
     private readonly TRANSPORTER_FEE_KEY = 'transporter_service_fee_percentage';
@@ -24,25 +24,25 @@ export class PlatformConfigService {
 
     constructor(private platformConfigRepository: PlatformConfigRepository) {
         // Initialize default values if they don't exist
-        this.initializeDefaultConfigs();
+        // this.initializeDefaultConfigs();
     }
 
-    private async initializeDefaultConfigs(): Promise<void> {
-        const defaultConfigs = [
-            {
-                key: this.TRANSPORTER_FEE_KEY,
-                value: this.DEFAULT_TRANSPORTER_FEE,
-                description: 'Service fee percentage charged to transporters'
-            },
-            {
-                key: this.TRADER_FEE_KEY,
-                value: this.DEFAULT_TRADER_FEE,
-                description: 'Service fee percentage charged to traders (buyers/sellers)'
-            }
-        ];
+    // private async initializeDefaultConfigs(): Promise<void> {
+    //     const defaultConfigs = [
+    //         {
+    //             key: this.TRANSPORTER_FEE_KEY,
+    //             value: this.DEFAULT_TRANSPORTER_FEE,
+    //             description: 'Service fee percentage charged to transporters'
+    //         },
+    //         {
+    //             key: this.TRADER_FEE_KEY,
+    //             value: this.DEFAULT_TRADER_FEE,
+    //             description: 'Service fee percentage charged to traders (buyers/sellers)'
+    //         }
+    //     ];
 
-        await this.platformConfigRepository.bulkUpsert(defaultConfigs);
-    }
+    //     await this.platformConfigRepository.bulkUpsert(defaultConfigs);
+    // }
 
     async create(createDto: CreatePlatformConfigDto): Promise<any> {
         const existingConfig = await this.platformConfigRepository.findOne(createDto.key);
@@ -111,16 +111,16 @@ export class PlatformConfigService {
             ]);
 
             return {
-                transporterServiceFee: transporterFee?.value || this.DEFAULT_TRANSPORTER_FEE,
-                traderServiceFee: traderFee?.value || this.DEFAULT_TRADER_FEE
+                transporterServiceFee: transporterFee?.value,
+                traderServiceFee: traderFee?.value
             };
         } catch (error) {
             console.error('Error fetching service fees:', error);
             // Return default values if there's an error
-            return {
-                transporterServiceFee: this.DEFAULT_TRANSPORTER_FEE,
-                traderServiceFee: this.DEFAULT_TRADER_FEE
-            };
+            // return {
+            //     transporterServiceFee: this.DEFAULT_TRANSPORTER_FEE,
+            //     traderServiceFee: this.DEFAULT_TRADER_FEE
+            // };
         }
     }
 

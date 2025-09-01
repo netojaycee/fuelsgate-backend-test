@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Negotiation Update Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 24px;
+        }
+
+        .details {
+            margin-bottom: 24px;
+        }
+
+        .details p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+
+        .status {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #007bff;
+            color: #fff;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 16px;
+        }
+
+        .footer {
+            margin-top: 32px;
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Negotiation Update</h2>
+        <div class="details">
+            <p><strong>Sender:</strong>
+                <%= Sender %>
+            </p>
+            <p><strong>Recipient:</strong>
+                <%= Recipient %>
+            </p>
+            <p><strong>Type:</strong>
+                <%= Type %>
+            </p>
+            <p><strong>Negotiation ID:</strong>
+                <%= NegotiationId %>
+            </p>
+            <p><strong>Order ID:</strong>
+                <%= OrderId %>
+            </p>
+            <p><strong>Status:</strong> <span class="status">
+                    <%= Status %>
+                </span></p>
+            <p><strong>Time:</strong>
+                <%= Time %>
+            </p>
+        </div>
+        <a class="button" href="<%= NegotiationUrl %>">View Negotiation</a>
+        <div class="footer">
+            This is an automated notification from Fuelsgate.<br>
+            If you have any questions, please contact support.
+        </div>
+    </div>
+</body>
+
+</html>

@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/modules/user/services/user.service';
 import { RoleService } from 'src/modules/role/service/role.service';
 import { IUser } from 'src/modules/user/dto/user.dto';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ResendService } from 'src/modules/resend/resend.service';
 import { join } from 'path';
 import {
   generateNumericCode,
@@ -34,7 +34,7 @@ export class AuthenticationService {
     private readonly roleService: RoleService,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
-    private readonly mailService: MailerService,
+    private readonly resendService: ResendService,
     private readonly authenticationRepository: AuthenticationRepository,
     private readonly buyerRepository: BuyerRepository,
     private readonly sellerRepository: SellerRepository,
@@ -93,10 +93,10 @@ export class AuthenticationService {
       email: payload.email,
     });
 
-    this.mailService.sendMail({
+    await this.resendService.sendMail({
       to: `${payload.email}`,
       subject: `Password Reset Request`,
-      template: join(__dirname, '../mails/forgot-password'),
+      template: join(__dirname, '../mails/forgot-password.ejs'),
       context: {
         Recipient: `${payload.firstName} ${payload.lastName}`,
         OTP: otp,

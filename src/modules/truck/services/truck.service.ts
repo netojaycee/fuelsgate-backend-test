@@ -7,9 +7,14 @@ import { SellerRepository } from "src/modules/seller/repositories/seller.reposit
 import { DepotHubRepository } from "src/modules/depot-hub/repositories/depot-hub.repository";
 import { ProductRepository } from "src/modules/product/repositories/product.repository";
 import { UserRepository } from "src/modules/user/repositories/user.repository";
-import { MailerService } from "@nestjs-modules/mailer";
+import { UserRoleRepository } from "src/modules/role/repositories/user-role.repository";
+import { RoleRepository } from "src/modules/role/repositories/role.repository";
+import { ResendService } from 'src/modules/resend/resend.service';
+;
 import { Types } from "mongoose";
 import { join } from "path";
+import * as fs from 'fs';
+import { getHtmlWithFooter } from 'src/utils/helpers';
 
 @Injectable()
 export class TruckService {
@@ -20,37 +25,211 @@ export class TruckService {
     private depotHubRepository: DepotHubRepository,
     private productRepository: ProductRepository,
     private userRepository: UserRepository,
-    private readonly mailService: MailerService,
+    private userRoleRepository: UserRoleRepository,
+    private roleRepository: RoleRepository,
+    private readonly resendService: ResendService,
   ) { }
 
   async saveNewTruckData(truckData: TruckDto, user: IJwtPayload) {
-    if (user.role === 'buyer') throw new ForbiddenException("You are not authorized to make this request")
-    if (user.role === 'transporter') {
-      const transporter = await this.transporterRepository.findOneQuery({ userId: user.id })
-      if (!transporter) throw new BadRequestException("Transporter ID is invalid")
-      truckData.profileId = transporter._id
-      truckData.profileType = 'Transporter'
-    } else if (user.role === 'seller') {
-      const seller = await this.sellerRepository.findOneQuery({ userId: user.id })
-      if (!seller) throw new BadRequestException("Seller ID is invalid")
-      truckData.profileId = seller._id
-      truckData.profileType = 'Seller'
+    try {
+      if (user.role === 'buyer') throw new ForbiddenException("You are not authorized to make this request");
+
+      // Always require truckType
+      if (!truckData.truckType) {
+        throw new BadRequestException("truckType is required");
+      }
+
+      // Set up profileId/profileType and status for all trucks
+      if (user.role === 'admin') {
+        if (!truckData.ownerId) {
+          throw new BadRequestException("ownerId is required when admin creates a truck");
+        }
+        const ownerUser = await this.userRepository.findOne(truckData.ownerId);
+        if (!ownerUser) {
+          throw new BadRequestException("Invalid ownerId - user not found");
+        }
+        const ownerUserRole = await this.userRoleRepository.findOneQuery({ userId: truckData.ownerId });
+        if (!ownerUserRole) {
+          throw new BadRequestException("User role not found for the specified owner");
+        }
+        const ownerRole = await this.roleRepository.findOne(ownerUserRole.roleId);
+        if (!ownerRole) {
+          throw new BadRequestException("Role not found for the specified owner");
+        }
+        if (ownerRole.name === 'transporter') {
+          const transporter = await this.transporterRepository.findOneQuery({ userId: truckData.ownerId });
+          if (!transporter) throw new BadRequestException("Transporter profile not found for the specified owner");
+          truckData.profileId = transporter._id;
+          truckData.profileType = 'transporter';
+        } else if (ownerRole.name === 'seller') {
+          const seller = await this.sellerRepository.findOneQuery({ userId: truckData.ownerId });
+          if (!seller) throw new BadRequestException("Seller profile not found for the specified owner");
+          truckData.profileId = seller._id;
+          truckData.profileType = 'seller';
+        } else {
+          throw new BadRequestException("Owner must be either a transporter or seller");
+        }
+        truckData.status = 'available';
+      } else if (user.role === 'transporter') {
+        const transporter = await this.transporterRepository.findOneQuery({ userId: user.id });
+        if (!transporter) throw new BadRequestException("Transporter ID is invalid");
+        truckData.profileId = transporter._id;
+        truckData.profileType = 'transporter';
+        truckData.status = 'pending';
+      } else if (user.role === 'seller') {
+        const seller = await this.sellerRepository.findOneQuery({ userId: user.id });
+        if (!seller) throw new BadRequestException("Seller ID is invalid");
+        truckData.profileId = seller._id;
+        truckData.profileType = 'seller';
+        truckData.status = 'pending';
+      }
+
+      // If flatbed, require currentState/currentCity, skip depotHub/product
+      if (truckData.truckType === 'flatbed') {
+        if (!truckData.currentState || !truckData.currentCity || !truckData.truckNumber) {
+          throw new BadRequestException("currentState, currentCity, and truckNumber are required for flatbed trucks");
+        }
+        // Create the truck
+        const newTruck = await this.truckRepository.create({
+          ...truckData,
+          truckType: 'flatbed',
+        });
+        // Send admin notification email for vetting/activation (only for non-admin created trucks)
+        if (user.role !== 'admin') {
+          try {
+            let ownerProfile: any;
+            if (truckData.profileType === 'transporter') {
+              ownerProfile = await this.transporterRepository.findOne(truckData.profileId);
+            } else if (truckData.profileType === 'seller') {
+              ownerProfile = await this.sellerRepository.findOne(truckData.profileId);
+            }
+            let ownerUser: any = null;
+            if (ownerProfile) {
+              ownerUser = await this.userRepository.findOne(ownerProfile.userId);
+            }
+            const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@fuelsgate.com';
+            const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL}/dashboard/trucks`;
+            let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/truck-status-admin-notification.html'), 'utf8');
+            const truckTypeLabel = (newTruck.truckType || truckData.truckType || '').toUpperCase();
+            const headerTitle = `${truckTypeLabel} Truck Added - Vetting & Activation Required`;
+            let description = `A new ${truckTypeLabel.toLowerCase()} truck has been added to the platform and requires your vetting and activation before it can be made available for use.`;
+            if (truckTypeLabel === 'FLATBED') {
+              description += ` Location: ${newTruck.currentState || truckData.currentState || ''}, ${newTruck.currentCity || truckData.currentCity || ''}.`;
+            } else if (truckTypeLabel === 'TANKER') {
+              description += ` Capacity: ${newTruck.capacity || ''}, Load Status: ${newTruck.loadStatus || ''}, Depot: ${newTruck.depot || ''}.`;
+            }
+            // Build truck details table HTML
+            let truckDetailsHtml = `<div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 0 8px;">`;
+            if (truckTypeLabel === 'FLATBED') {
+              truckDetailsHtml += `
+                <tr><td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Owner:</td><td style="padding:8px 0; color:#666;">${ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Owner Email:</td><td style="padding:8px 0; color:#666;">${ownerUser ? ownerUser.email : 'Unknown'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Number:</td><td style="padding:8px 0; color:#666;">${newTruck.truckNumber}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current State:</td><td style="padding:8px 0; color:#666;">${newTruck.currentState || truckData.currentState || 'N/A'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current City:</td><td style="padding:8px 0; color:#666;">${newTruck.currentCity || truckData.currentCity || 'N/A'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Requested Status:</td><td style="padding:8px 0; color:#10b981; font-weight:600;">activation</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Request Time:</td><td style="padding:8px 0; color:#666;">${new Date().toLocaleString()}</td></tr>
+              `;
+            } else {
+              truckDetailsHtml += `
+                <tr><td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Owner:</td><td style="padding:8px 0; color:#666;">${ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Owner Email:</td><td style="padding:8px 0; color:#666;">${ownerUser ? ownerUser.email : 'Unknown'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Number:</td><td style="padding:8px 0; color:#666;">${newTruck.truckNumber}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Capacity:</td><td style="padding:8px 0; color:#666;">${newTruck.capacity}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Load Status:</td><td style="padding:8px 0; color:#666;">${newTruck.loadStatus || 'Not specified'}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Depot:</td><td style="padding:8px 0; color:#666;">${newTruck.depot}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current Status:</td><td style="padding:8px 0; color:#666;">${newTruck.status}</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Requested Status:</td><td style="padding:8px 0; color:#10b981; font-weight:600;">activation</td></tr>
+                <tr><td style="padding:8px 0; color:#444; font-weight:600;">Request Time:</td><td style="padding:8px 0; color:#666;">${new Date().toLocaleString()}</td></tr>
+              `;
+            }
+            truckDetailsHtml += `</table></div>`;
+
+            generalHtml = generalHtml
+              .replace(/{{HeaderTitle}}/g, headerTitle)
+              .replace(/{{Description}}/g, description)
+              .replace(/{{TruckDetailsHtml}}/g, truckDetailsHtml)
+              .replace(/{{AdminDashboardUrl}}/g, adminDashboardUrl);
+            await this.resendService.sendMail({
+              to: adminEmail,
+              subject: 'New Truck Created - Vetting & Activation Required',
+              html: getHtmlWithFooter(generalHtml),
+            });
+          } catch (error) {
+            console.error('Error sending admin notification email for new truck:', error);
+          }
+        }
+        return newTruck;
+      }
+
+      // If tanker, require depotHub/product
+      const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId);
+      const product = await this.productRepository.findOne(truckData.productId);
+      if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
+      if (!product) throw new BadRequestException("Product ID is invalid");
+      truckData.productId = product._id;
+      truckData.depotHubId = depotHub._id;
+      truckData.truckType = 'tanker';
+      // Create the truck
+      const newTruck = await this.truckRepository.create(truckData);
+      // Send admin notification email for vetting/activation (only for non-admin created trucks)
+      if (user.role !== 'admin') {
+        try {
+          let ownerProfile: any;
+          if (truckData.profileType === 'transporter') {
+            ownerProfile = await this.transporterRepository.findOne(truckData.profileId);
+          } else if (truckData.profileType === 'seller') {
+            ownerProfile = await this.sellerRepository.findOne(truckData.profileId);
+          }
+          let ownerUser: any = null;
+          if (ownerProfile) {
+            ownerUser = await this.userRepository.findOne(ownerProfile.userId);
+          }
+          const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@fuelsgate.com';
+          const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL}/dashboard/trucks`;
+          let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/truck-status-admin-notification.html'), 'utf8');
+          const headerTitle = 'New Truck Added - Vetting & Activation Required';
+          const description = 'A new truck has been added to the platform and requires your vetting and activation before it can be made available for use.';
+          generalHtml = generalHtml
+            .replace(/{{HeaderTitle}}/g, headerTitle)
+            .replace(/{{Description}}/g, description)
+            .replace(/{{TruckOwner}}/g, ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown')
+            .replace(/{{OwnerEmail}}/g, ownerUser ? ownerUser.email : 'Unknown')
+            .replace(/{{TruckNumber}}/g, newTruck.truckNumber)
+            .replace(/{{TruckCapacity}}/g, newTruck.capacity)
+            .replace(/{{Depot}}/g, newTruck.depot)
+            .replace(/{{CurrentStatus}}/g, newTruck.status)
+            .replace(/{{RequestedStatus}}/g, 'activation')
+            .replace(/{{LoadStatus}}/g, newTruck.loadStatus || 'Not specified')
+            .replace(/{{AdminDashboardUrl}}/g, adminDashboardUrl)
+            .replace(/{{RequestTime}}/g, new Date().toLocaleString());
+          await this.resendService.sendMail({
+            to: adminEmail,
+            subject: 'New Truck Created - Vetting & Activation Required',
+            html: getHtmlWithFooter(generalHtml),
+          });
+        } catch (error) {
+          console.error('Error sending admin notification email for new truck:', error);
+        }
+      }
+      return newTruck;
+    } catch (error: any) {
+      if (error?.code === 11000 && error?.keyPattern?.truckNumber) {
+        throw new BadRequestException(`Truck number "${truckData.truckNumber}" already exists.`);
+      }
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      if (error?.message) {
+        throw new BadRequestException(error.message);
+      }
+      throw new BadRequestException('An unexpected error occurred while saving truck data.');
     }
-
-    const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId)
-    const product = await this.productRepository.findOne(truckData.productId)
-
-    if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
-    if (!product) throw new BadRequestException("Product ID is invalid");
-
-    truckData.productId = product._id
-    truckData.depotHubId = depotHub._id
-
-    return await this.truckRepository.create(truckData);
   }
 
   async getAllTrucks(query: TruckQueryDto, user: IJwtPayload) {
-    const { page = 1, limit = 10, search, profileId, status, depotHubId, productId, size } = query;
+  const { page = 1, limit = 10, search, profileId, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity } = query;
     let offset = 0;
     if (page && page > 0) {
       offset = (page - 1) * limit;
@@ -69,15 +248,33 @@ export class TruckService {
 
     // Handle multiple statuses like in getUserTrucks
     if (status) {
-      // Split status by comma and trim whitespace
       const statusArray = status.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
       if (statusArray.length === 1) {
-        // Single status - use regex for partial matching
         searchFilter.$and.push({ status: { $regex: statusArray[0], $options: 'i' } });
       } else if (statusArray.length > 1) {
-        // Multiple statuses - use $in operator for exact matching
         searchFilter.$and.push({ status: { $in: statusArray } });
+      }
+    }
+
+    // Filter by truckType (exact match)
+    if (truckType) {
+      searchFilter.$and.push({ truckType });
+    }
+    // Filter by currentState (case-insensitive)
+    if (currentState) {
+      searchFilter.$and.push({ currentState: { $regex: `^${currentState}$`, $options: 'i' } });
+    }
+    // Filter by currentCity (case-insensitive)
+    if (currentCity) {
+      searchFilter.$and.push({ currentCity: { $regex: `^${currentCity}$`, $options: 'i' } });
+    }
+    // Filter by loadStatus (exact/in)
+    if (loadStatus) {
+      const loadStatusArray = loadStatus.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      if (loadStatusArray.length === 1) {
+        searchFilter.$and.push({ loadStatus: loadStatusArray[0] });
+      } else if (loadStatusArray.length > 1) {
+        searchFilter.$and.push({ loadStatus: { $in: loadStatusArray } });
       }
     }
 
@@ -92,6 +289,7 @@ export class TruckService {
     }
 
     if (size) searchFilter.$and.push({ capacity: { $regex: size, $options: 'i' } });
+    if (loadStatus) searchFilter.$and.push({ loadStatus: { $regex: loadStatus, $options: 'i' } });
 
     // For admin users, don't filter by profileId unless explicitly provided in the query
     // For non-admin users, always filter by their profile type
@@ -139,9 +337,9 @@ export class TruckService {
     };
   }
   async getAllPublicTrucks(query: TruckQueryDto) {
-   
-    const { page = 1, limit = 10, search, status, depotHubId, productId, size } = query;
-   
+
+    const { page = 1, limit = 10, search, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity } = query;
+
     let offset = 0;
     if (page && page > 0) {
       offset = (page - 1) * limit;
@@ -172,6 +370,19 @@ export class TruckService {
       }
     }
 
+    // Filter by truckType (exact match)
+    if (truckType) {
+      searchFilter.$and.push({ truckType });
+    }
+    // Filter by currentState (case-insensitive)
+    if (currentState) {
+      searchFilter.$and.push({ currentState: { $regex: `^${currentState}$`, $options: 'i' } });
+    }
+    // Filter by currentCity (case-insensitive)
+    if (currentCity) {
+      searchFilter.$and.push({ currentCity: { $regex: `^${currentCity}$`, $options: 'i' } });
+    }
+
     if (depotHubId) {
       const depotHub = await this.depotHubRepository.findOne(depotHubId)
       if (depotHub) searchFilter.$and.push({ depotHubId: depotHub._id });
@@ -184,6 +395,14 @@ export class TruckService {
 
     if (size) searchFilter.$and.push({ capacity: { $regex: size, $options: 'i' } });
 
+    if (loadStatus) {
+      const statusArray = loadStatus.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      if (statusArray.length === 1) {
+        searchFilter.$and.push({ loadStatus: statusArray[0] }); // exact match
+      } else if (statusArray.length > 1) {
+        searchFilter.$and.push({ loadStatus: { $in: statusArray } });
+      }
+    }
     // Clean up empty arrays
     if (!searchFilter.$or.length) delete searchFilter.$or;
     if (!searchFilter.$and.length) delete searchFilter.$and;
@@ -303,27 +522,104 @@ export class TruckService {
     return truck
   }
 
-  async updateTruckData(truckId: string, truckData: TruckDto) {
-    if (truckData.profileType === 'Transporter') {
-      const transporter = await this.transporterRepository.findOne(truckData.profileId)
-      if (!transporter) throw new BadRequestException("Transporter ID is invalid")
-      truckData.profileId = transporter._id
-    } else if (truckData.profileType === 'Seller') {
-      const seller = await this.sellerRepository.findOne(truckData.profileId)
-      if (!seller) throw new BadRequestException("Seller ID is invalid")
-      truckData.profileId = seller._id
+  async updateTruckData(truckId: string, truckData: TruckDto, user: IJwtPayload) {
+    try {
+      // Get the existing truck to validate ownership and permissions
+      const existingTruck = await this.truckRepository.findOne(truckId);
+      if (!existingTruck) {
+        throw new NotFoundException("Truck not found");
+      }
+
+      // Handle admin updates
+      if (user.role === 'admin') {
+        // Admin can update any truck, including changing ownership (but not ownerId)
+        if (truckData.ownerId && truckData.ownerId !== existingTruck.ownerId) {
+          throw new BadRequestException("Admin cannot change the truck's ownerId. This operation is not allowed.");
+        }
+
+        // If admin is updating profile information, validate the new profile
+        if (truckData.profileType && truckData.profileId) {
+          if (truckData.profileType === 'transporter') {
+            const transporter = await this.transporterRepository.findOne(truckData.profileId);
+            if (!transporter) throw new BadRequestException("Transporter ID is invalid");
+            truckData.profileId = transporter._id;
+          } else if (truckData.profileType === 'seller') {
+            const seller = await this.sellerRepository.findOne(truckData.profileId);
+            if (!seller) throw new BadRequestException("Seller ID is invalid");
+            truckData.profileId = seller._id;
+          }
+        } else if (truckData.profileType || truckData.profileId) {
+          // If only one is provided, throw error
+          throw new BadRequestException("Both profileType and profileId must be provided together for admin updates");
+        }
+
+        // Admin can update truckOwner and ownerLogo fields
+        // These fields will be passed through as-is if provided
+
+      } else {
+        // Non-admin users can only update their own trucks
+        let userProfile: any;
+        let userProfileId: string;
+
+        if (user.role === 'transporter') {
+          userProfile = await this.transporterRepository.findOneQuery({ userId: user.id });
+          if (!userProfile) throw new ForbiddenException("Transporter profile not found");
+          userProfileId = userProfile._id.toString();
+        } else if (user.role === 'seller') {
+          userProfile = await this.sellerRepository.findOneQuery({ userId: user.id });
+          if (!userProfile) throw new ForbiddenException("Seller profile not found");
+          userProfileId = userProfile._id.toString();
+        } else {
+          throw new ForbiddenException("You are not authorized to update trucks");
+        }
+
+        // Check if user owns this truck
+        if (existingTruck.profileId.toString() !== userProfileId) {
+          throw new ForbiddenException("You can only update your own trucks");
+        }
+
+        // Non-admin users cannot change profile information, truckOwner, or ownerLogo
+        // if (truckData.profileType || truckData.profileId) {
+        //   throw new ForbiddenException("You cannot change truck ownership information");
+        // }
+        // if (truckData.truckOwner || truckData.ownerLogo) {
+        //   throw new ForbiddenException("You cannot change truck owner details");
+        // }
+        // if (truckData.ownerId) {
+        //   throw new ForbiddenException("You cannot change truck owner ID");
+        // }
+
+        // For non-admin updates, maintain existing profile information
+        truckData.profileId = existingTruck.profileId;
+        truckData.profileType = existingTruck.profileType;
+      }
+
+      // Validate depot hub and product (for all users)
+      if (truckData.depotHubId) {
+        const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId);
+        if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
+        truckData.depotHubId = depotHub._id;
+      }
+
+      if (truckData.productId) {
+        const product = await this.productRepository.findOne(truckData.productId);
+        if (!product) throw new BadRequestException("Product ID is invalid");
+        truckData.productId = product._id;
+      }
+
+      return await this.truckRepository.update(truckId, truckData);
+
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException || error instanceof NotFoundException) {
+        throw error;
+      }
+      // Handle other known errors
+      if (error?.message) {
+        throw new BadRequestException(error.message);
+      }
+      // Fallback to generic error
+      throw new BadRequestException('An unexpected error occurred while updating truck data.');
     }
-
-    const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId)
-    const product = await this.productRepository.findOne(truckData.productId)
-
-    if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
-    if (!product) throw new BadRequestException("Product ID is invalid");
-
-    truckData.productId = product._id
-    truckData.depotHubId = depotHub._id
-
-    return await this.truckRepository.update(truckId, truckData);
   }
 
   async deleteTruckData(truckId: string) {
@@ -349,9 +645,9 @@ export class TruckService {
     let ownerProfile: any;
     let ownerUser: any;
 
-    if (truck.profileType === 'Transporter') {
+    if (truck.profileType === 'transporter') {
       ownerProfile = await this.transporterRepository.findOne(truck.profileId);
-    } else if (truck.profileType === 'Seller') {
+    } else if (truck.profileType === 'seller') {
       ownerProfile = await this.sellerRepository.findOne(truck.profileId);
     }
 
@@ -374,7 +670,7 @@ export class TruckService {
     }
 
     // Update the truck status
-    const updatedTruck = await this.truckRepository.update(truckId, { ...truck, status });
+    const updatedTruck = await this.truckRepository.update(truckId, { status });
 
     return updatedTruck;
   }
@@ -382,23 +678,59 @@ export class TruckService {
   private async sendAdminNotificationEmail(truck: any, ownerProfile: any, ownerUser: any, requestedStatus: string) {
     try {
       const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@fuelsgate.com';
-      const adminDashboardUrl = `${process.env.FRONTEND_URL}/admin/trucks/${truck._id}`;
+      const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL}/dashboard/trucks`;
 
-      await this.mailService.sendMail({
+      // Read and prepare email template
+      let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/truck-status-admin-notification.html'), 'utf8');
+
+      // Prepare conditional content
+      const truckTypeLabel = (truck.truckType || '').toUpperCase();
+      const headerTitle = `${truckTypeLabel} Truck Status Update Request`;
+      let description = `A ${truckTypeLabel.toLowerCase()} truck owner has requested to update their truck status to "available" and requires admin approval.`;
+      if (truckTypeLabel === 'FLATBED') {
+        description += ` Location: ${truck.currentState || ''}, ${truck.currentCity || ''}.`;
+      } else if (truckTypeLabel === 'TANKER') {
+        description += ` Capacity: ${truck.capacity || ''}, Load Status: ${truck.loadStatus || ''}, Depot: ${truck.depot || ''}.`;
+      }
+
+      // Build truck details table HTML
+      let truckDetailsHtml = `<div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 0 8px;">`;
+      if (truckTypeLabel === 'FLATBED') {
+        truckDetailsHtml += `
+          <tr><td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Owner:</td><td style="padding:8px 0; color:#666;">${ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Owner Email:</td><td style="padding:8px 0; color:#666;">${ownerUser ? ownerUser.email : 'Unknown'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Number:</td><td style="padding:8px 0; color:#666;">${truck.truckNumber}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current State:</td><td style="padding:8px 0; color:#666;">${truck.currentState || 'N/A'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current City:</td><td style="padding:8px 0; color:#666;">${truck.currentCity || 'N/A'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Requested Status:</td><td style="padding:8px 0; color:#10b981; font-weight:600;">${requestedStatus}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Request Time:</td><td style="padding:8px 0; color:#666;">${new Date().toLocaleString()}</td></tr>
+        `;
+      } else {
+        truckDetailsHtml += `
+          <tr><td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Owner:</td><td style="padding:8px 0; color:#666;">${ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Owner Email:</td><td style="padding:8px 0; color:#666;">${ownerUser ? ownerUser.email : 'Unknown'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Number:</td><td style="padding:8px 0; color:#666;">${truck.truckNumber}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Truck Capacity:</td><td style="padding:8px 0; color:#666;">${truck.capacity}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Load Status:</td><td style="padding:8px 0; color:#666;">${truck.loadStatus || 'Not specified'}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Depot:</td><td style="padding:8px 0; color:#666;">${truck.depot}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Current Status:</td><td style="padding:8px 0; color:#666;">${truck.status}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Requested Status:</td><td style="padding:8px 0; color:#10b981; font-weight:600;">${requestedStatus}</td></tr>
+          <tr><td style="padding:8px 0; color:#444; font-weight:600;">Request Time:</td><td style="padding:8px 0; color:#666;">${new Date().toLocaleString()}</td></tr>
+        `;
+      }
+      truckDetailsHtml += `</table></div>`;
+
+      generalHtml = generalHtml
+        .replace(/{{HeaderTitle}}/g, headerTitle)
+        .replace(/{{Description}}/g, description)
+        .replace(/{{TruckDetailsHtml}}/g, truckDetailsHtml)
+        .replace(/{{AdminDashboardUrl}}/g, adminDashboardUrl);
+
+      await this.resendService.sendMail({
         to: adminEmail,
         subject: 'Truck Status Update Request - Action Required',
-        template: join(__dirname, '../mails/truck-status-admin-notification'),
-        context: {
-          TruckOwner: `${ownerUser.firstName} ${ownerUser.lastName}`,
-          OwnerEmail: ownerUser.email,
-          TruckNumber: truck.truckNumber,
-          TruckCapacity: truck.capacity,
-          Depot: truck.depot,
-          CurrentStatus: truck.status,
-          RequestedStatus: requestedStatus,
-          AdminDashboardUrl: adminDashboardUrl,
-          RequestTime: new Date().toLocaleString(),
-        },
+        html: getHtmlWithFooter(generalHtml),
       });
     } catch (error) {
       console.error('Error sending admin notification email:', error);
@@ -408,22 +740,58 @@ export class TruckService {
 
   private async sendOwnerStatusUpdateEmail(truck: any, ownerProfile: any, ownerUser: any, previousStatus: string, newStatus: string) {
     try {
-      const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard/trucks`;
+      const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard/`;
 
-      await this.mailService.sendMail({
+      // Read and prepare email template
+      let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/truck-status-owner-notification.html'), 'utf8');
+
+      // Prepare status-specific message
+      let statusMessage = '';
+      if (newStatus === 'available') {
+        statusMessage = `
+          <div style="background:#ecfdf5; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+            <p style="font-size:16px; color:#065f46; margin:0; font-weight:500;">
+              🎉 Great news! Your truck is now available for orders. You can start receiving booking requests.
+            </p>
+          </div>
+        `;
+      } else if (newStatus === 'locked') {
+        statusMessage = `
+          <div style="background:#fef2f2; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+            <p style="font-size:16px; color:#991b1b; margin:0; font-weight:500;">
+              ⚠️ Important: Your truck has been locked and is temporarily unavailable for new orders. Please contact support if you need more information.
+            </p>
+          </div>
+        `;
+      }
+
+      // Prepare header and description with truck type
+      const truckTypeLabel = (truck.truckType || '').toUpperCase();
+      const headerTitle = `${truckTypeLabel} Truck Status Updated`;
+      let description = `Your ${truckTypeLabel.toLowerCase()} truck status has been updated.`;
+      if (truckTypeLabel === 'FLATBED') {
+        description += ` Location: ${truck.currentState || ''}, ${truck.currentCity || ''}.`;
+      } else if (truckTypeLabel === 'TANKER') {
+        description += ` Capacity: ${truck.capacity || ''}, Load Status: ${truck.loadStatus || ''}, Depot: ${truck.depot || ''}.`;
+      }
+      // Replace all variables in template
+      generalHtml = generalHtml
+        .replace(/{{HeaderTitle}}/g, headerTitle)
+        .replace(/{{Description}}/g, description)
+        .replace(/{{TruckOwner}}/g, `${ownerUser.firstName} ${ownerUser.lastName}`)
+        .replace(/{{TruckNumber}}/g, truck.truckNumber)
+        .replace(/{{TruckCapacity}}/g, truck.capacity)
+        .replace(/{{Depot}}/g, truck.depot)
+        .replace(/{{PreviousStatus}}/g, previousStatus)
+        .replace(/{{NewStatus}}/g, newStatus)
+        .replace(/{{StatusMessage}}/g, statusMessage)
+        .replace(/{{DashboardUrl}}/g, dashboardUrl)
+        .replace(/{{UpdateTime}}/g, new Date().toLocaleString());
+
+      await this.resendService.sendMail({
         to: ownerUser.email,
         subject: `Truck Status Updated - ${truck.truckNumber}`,
-        template: join(__dirname, '../mails/truck-status-owner-notification'),
-        context: {
-          TruckOwner: `${ownerUser.firstName} ${ownerUser.lastName}`,
-          TruckNumber: truck.truckNumber,
-          TruckCapacity: truck.capacity,
-          Depot: truck.depot,
-          PreviousStatus: previousStatus,
-          NewStatus: newStatus,
-          DashboardUrl: dashboardUrl,
-          UpdateTime: new Date().toLocaleString(),
-        },
+        html: getHtmlWithFooter(generalHtml),
       });
     } catch (error) {
       console.error('Error sending owner status update email:', error);

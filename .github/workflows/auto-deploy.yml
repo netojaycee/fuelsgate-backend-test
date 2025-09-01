@@ -24,8 +24,9 @@ jobs:
           timeout: 120s
           script: |
             cd ~/apps/fuelsgate-backend
-            pm2 stop fuelsgate
-            pm2 delete fuelsgate
+            # pm2 stop fuelsgate
+            # pm2 delete fuelsgate
+            pm2 delete fuelsgate || true
 
       - name: Copy code to server
         uses: appleboy/scp-action@v0.1.4

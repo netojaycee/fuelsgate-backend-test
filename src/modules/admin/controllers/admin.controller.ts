@@ -87,7 +87,7 @@ export class AdminController {
   }
 
   @Get('analytics/recent/orders')
-  async getRecentProductOrders(
+  async getRecentOrders(
     @Request() req,
     @Response() res,
     @Query('date') date: string,
@@ -101,18 +101,18 @@ export class AdminController {
     });
   }
 
-  @Get('analytics/recent/truck-orders')
-  async getRecentTruckOrders(
-    @Request() req,
-    @Response() res,
-    @Query('date') date: string,
-  ): Promise<any> {
-    const { user } = req;
-    const data = await this.adminService.getTruckOrderDataByDate(user, date);
-    return res.status(200).json({
-      message: 'Recent truck orders fetched successfully',
-      data,
-      statusCode: 200,
-    });
-  }
+  // @Get('analytics/recent/truck-orders')
+  // async getRecentTruckOrders(
+  //   @Request() req,
+  //   @Response() res,
+  //   @Query('date') date: string,
+  // ): Promise<any> {
+  //   const { user } = req;
+  //   const data = await this.adminService.getTruckOrderDataByDate(user, date);
+  //   return res.status(200).json({
+  //     message: 'Recent truck orders fetched successfully',
+  //     data,
+  //     statusCode: 200,
+  //   });
+  // }
 }

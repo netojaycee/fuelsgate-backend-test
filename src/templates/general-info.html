@@ -1,0 +1,124 @@
+<!-- email-general-info.html: General info email for all users, role-based demo link, ticket order image, reusable footer -->
+<table width="100%" cellpadding="0" cellspacing="0"
+    style="background:#fff; font-family: 'Inter', Arial, sans-serif; margin:0; padding:0;">
+    <tr>
+        <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:auto; background:#fff;">
+                <tr>
+                    <td style="padding: 32px 24px 0 24px;">
+                        <p style="font-size:16px; color:#444; margin:0 0 20px 0;">
+                            Dear {{user_name}},
+                        </p>
+                        <h1 style="font-size:22px; font-weight:700; color:#444; margin:0 0 20px 0;">
+                            Secure Your Transactions with Fuelsgate
+                        </h1>
+
+                        <div style="border-left: 4px solid #b1976b; padding-left: 16px; margin:0 0 24px 0;">
+                            <p style="font-size:16px; color:#444; margin:0;">
+                                The matching of trucks and loads on Fuelsgate is bound by smart contracts that are used
+                                to
+                                reconcile all transactions on our platform, ensuring security and transparency for all
+                                parties.
+                            </p>
+                        </div>
+
+                        <!-- Smart Contract Section -->
+                        <div style="background:#f5f2ed; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+                            <h2 style="font-size:18px; font-weight:600; color:#444; margin:0 0 16px 0;">
+                                How Our Smart Contracts Work
+                            </h2>
+                            <ul style="font-size:16px; color:#444; margin:0; padding-left:20px;">
+                                <li style="margin-bottom:8px;">Automatic digital contract generation</li>
+                                <li style="margin-bottom:8px;">Undeniable proof of agreement</li>
+                                <li>Essential documentation for successful transactions</li>
+                            </ul>
+                        </div>
+
+                        <!-- Image and Payment Info Section -->
+                        <div style="margin:0 0 24px 0;">
+                            <!-- Image Section -->
+                            <div style="margin-bottom:20px; max-width:280px; margin-left:auto; margin-right:auto;">
+                                <img src="https://fuelsgate.com/images/ticket-order-example2.png"
+                                    alt="Ticket Order Example"
+                                    style="width:100%; height:auto; display:block; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                            </div>
+
+                            <!-- Payment Info Section -->
+                            <div>
+                                <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin-bottom:16px;">
+                                    <h2 style="font-size:18px; font-weight:600; color:#444; margin:0 0 16px 0;">
+                                        Important Payment Information
+                                    </h2>
+                                    <ul style="font-size:16px; color:#444; margin:0; padding-left:20px;">
+                                        <li style="margin-bottom:8px;">Fuelsgate does not handle freight costs</li>
+                                        <li style="margin-bottom:8px;">No online payment integrations</li>
+                                        <li style="margin-bottom:8px;">Staff will never request online payments</li>
+                                        <li style="margin-bottom:8px;">Freight fees handled directly between parties
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div style="background:#f5f2ed; border-radius:8px; padding:20px;">
+                                    <p style="font-size:16px; color:#444; margin:0;">
+                                        Fuelsgate only charges a platform service fee. The amount and our bank details
+                                        are clearly
+                                        stated at the bottom of your Ticket Order document.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+                            <h2 style="font-size:18px; font-weight:600; color:#444; margin:0 0 16px 0;">
+                                Need Support?
+                            </h2>
+                            <p style="font-size:16px; color:#444; margin:0 0 12px 0;">
+                                For any complaints or issues, contact us:
+                            </p>
+                            <div style="margin-left:20px;">
+                                <p style="font-size:16px; color:#444; margin:0 0 8px 0;">
+                                    <strong>Traders:</strong>
+                                    <a href="mailto:trader@fuelsgate.com"
+                                        style="color:#b1976b; font-weight:500; text-decoration:underline;">
+                                        trader@fuelsgate.com
+                                    </a>
+                                </p>
+                                <p style="font-size:16px; color:#444; margin:0;">
+                                    <strong>Transporters:</strong>
+                                    <a href="mailto:transporter@fuelsgate.com"
+                                        style="color:#b1976b; font-weight:500; text-decoration:underline;">
+                                        transporter@fuelsgate.com
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Signature -->
+                        <p style="font-size:16px; color:#444; margin:0 0 24px 0;">
+                            Best regards,<br>
+                            The Fuelsgate Team
+                        </p>
+
+                        <!-- Demo Video Link -->
+                        <div
+                            style="text-align:center; background:#f5f2ed; border-radius:8px; padding:20px; margin:0 0 24px 0;">
+                            <h2 style="font-size:18px; font-weight:600; color:#444; margin:0 0 12px 0;">
+                                Need Help Understanding Your Ticket Order?
+                            </h2>
+                            <p style="font-size:16px; color:#444; margin:0;">
+                                {{demoLinks}}
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <!-- Include footer here -->
+                        {{footer_html}}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

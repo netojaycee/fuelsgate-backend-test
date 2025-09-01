@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { BuyerDto } from '../dto/buyer.dto';
 import { BuyerRepository } from '../repositories/buyer.repository';
 import { IJwtPayload } from 'src/shared/strategies/jwt.strategy';
@@ -15,17 +15,50 @@ export class BuyerService {
     private productRepository: ProductRepository,
   ) { }
 
-  async saveNewBuyerInfo(buyerData: BuyerDto, user: any) {
+  async saveNewBuyerInfo(buyerData: BuyerDto, user: any, session?: any) {
+    console.log('=== BUYER SERVICE DEBUG ===');
+    console.log('buyerData:', JSON.stringify(buyerData, null, 2));
+    console.log('user:', JSON.stringify(user, null, 2));
+    console.log('user._id:', user?._id);
+    console.log('user._doc?._id:', user?._doc?._id);
+    console.log('user.id:', user?.id);
+    console.log('session:', session ? 'provided' : 'not provided');
+
     if (user.role !== 'buyer') {
       throw new ForbiddenException(
         'You are not authorized to create a buyer account',
       );
     }
 
-    return await this.buyerRepository.create({
+    // Get the actual _id from the user object (handle Mongoose document structure)
+    const userId = user._id || user._doc?._id || user.id;
+
+    if (!userId) {
+      console.error('ERROR: User object is invalid or missing _id');
+      console.error('User object:', user);
+      console.error('user._id:', user._id);
+      console.error('user._doc?._id:', user._doc?._id);
+      console.error('user.id:', user.id);
+      throw new BadRequestException('User object is invalid or missing _id');
+    }
+
+    // Ensure userId is properly set
+    const buyerPayload = {
       ...buyerData,
-      userId: user._id,
-    });
+      userId: userId.toString(), // This should be an ObjectId from the user creation
+    };
+
+    console.log('Final buyer payload:', JSON.stringify(buyerPayload, null, 2));
+    console.log('buyerPayload.userId:', buyerPayload.userId);
+    console.log('buyerPayload.userId type:', typeof buyerPayload.userId);
+    console.log('Extracted userId:', userId);
+    console.log('Extracted userId type:', typeof userId);
+    console.log('=== END BUYER SERVICE DEBUG ===');
+
+    return await this.buyerRepository.create(
+      buyerPayload,
+      session ? { session } : undefined
+    );
   }
 
   async getAnalytics(user: IJwtPayload) {

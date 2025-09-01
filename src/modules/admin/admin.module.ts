@@ -9,14 +9,10 @@ import {
   ProductUpload,
   ProductUploadSchema,
 } from '../product-upload/entities/product-upload.entity';
-import { Order, OrderSchema } from '../order/entities/order.entity';
 import { Offer, OfferSchema } from '../offer/entities/offer.entity';
 import { TruckRepository } from '../truck/repositories/truck.repository';
 import { Truck, TruckSchema } from '../truck/entities/truck.entity';
-import {
-  TruckOrder,
-  TruckOrderSchema,
-} from '../truck-order/entities/truck-order.entity';
+
 import {
   Transporter,
   TransporterSchema,
@@ -34,16 +30,18 @@ import { UserRepository } from '../user/repositories/user.repository';
 import { UserRoleRepository } from '../role/repositories/user-role.repository';
 import { RoleRepository } from '../role/repositories/role.repository';
 import { OrderRepository } from '../order/repositories/order.repository';
-import { TruckOrderRepository } from '../truck-order/repositories/truck-order.repository';
 import { OfferRepository } from '../offer/repositories/offer.repository';
 import { DepotHubRepository } from '../depot-hub/repositories/depot-hub.repository';
 import { ProductRepository } from '../product/repositories/product.repository';
-import { Message, MessageSchema } from '../offer/entities/message.entity';
+import { OfferMessage, OfferMessageSchema } from '../offer/entities/message.entity';
 import {
   DepotHub,
   DepotHubSchema,
 } from '../depot-hub/entities/depot-hub.entity';
 import { Product, ProductSchema } from '../product/entities/product.entity';
+import { ResendModule } from '../resend/resend.module';
+import { BuyerModule } from '../buyer/buyer.module';
+import { Order, OrderSchema } from '../order/entities/order.entity';
 
 @Module({
   imports: [
@@ -53,16 +51,15 @@ import { Product, ProductSchema } from '../product/entities/product.entity';
       { name: Order.name, schema: OrderSchema },
       { name: Offer.name, schema: OfferSchema },
       { name: Truck.name, schema: TruckSchema },
-      { name: TruckOrder.name, schema: TruckOrderSchema },
       { name: Transporter.name, schema: TransporterSchema },
       { name: Seller.name, schema: SellerSchema },
       { name: UserRole.name, schema: UserRoleSchema },
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
-      { name: Message.name, schema: MessageSchema },
+      { name: OfferMessage.name, schema: OfferMessageSchema },
       { name: DepotHub.name, schema: DepotHubSchema },
       { name: Product.name, schema: ProductSchema },
-    ]),
+    ]), ResendModule, BuyerModule,
   ],
   controllers: [AdminController],
   providers: [
@@ -76,11 +73,10 @@ import { Product, ProductSchema } from '../product/entities/product.entity';
     UserRoleRepository,
     RoleRepository,
     OrderRepository,
-    TruckOrderRepository,
     OfferRepository,
     DepotHubRepository,
     ProductRepository,
   ],
   exports: [AdminSeedService],
 })
-export class AdminModule {}
+export class AdminModule { }

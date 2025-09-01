@@ -5,6 +5,8 @@ import { Model, Types } from 'mongoose';
 import { User } from '../entities/user.entity';
 import { UserRoleDto } from 'src/modules/role/dto/user_role.dto';
 import { UserRole } from 'src/modules/role/entities/user-role.entities';
+import { Transporter } from 'src/modules/transporter/entities/transporter.entity';
+import { Seller } from 'src/modules/seller/entities/seller.entity';
 
 export interface IUserModel extends Omit<IUser, '_id'>, Document {
   _id?: Types.ObjectId;
@@ -15,13 +17,21 @@ export class UserRepository {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(UserRole.name) private userRoleModel: Model<UserRole>,
-  ) {}
+    @InjectModel(Transporter.name) private transporterModel: Model<Transporter>,
+    @InjectModel(Seller.name) private sellerModel: Model<Seller>,
+  ) { }
 
-  async create(createUserDto: IUserWithRole) {
+  async create(createUserDto: IUserWithRole, options?: { session?: any }) {
+    if (options && options.session) {
+      return await new this.userModel(createUserDto).save({ session: options.session });
+    }
     return await new this.userModel(createUserDto).save();
   }
 
-  async createUserRole(UserRoleDto: UserRoleDto) {
+  async createUserRole(UserRoleDto: UserRoleDto, options?: { session?: any }) {
+    if (options && options.session) {
+      return await new this.userRoleModel(UserRoleDto).save({ session: options.session });
+    }
     return await new this.userRoleModel(UserRoleDto).save();
   }
 
@@ -30,7 +40,52 @@ export class UserRepository {
     offset?: number,
     limit?: number,
   ): Promise<any> {
-    return await this.userModel.find(searchFilter).skip(offset).limit(limit);
+    const users = await this.userModel.find(searchFilter).skip(offset).limit(limit).lean();
+
+    // Enhance users with profile information (phoneNumber) only for transporter/seller profiles
+    const usersWithProfiles = await Promise.all(
+      users.map(async (user) => {
+        let profilePhoneNumber: string | null = null;
+        let hasProfile = false;
+
+        // Check if user has a transporter profile
+        const transporterProfile = await this.transporterModel
+          .findOne({ userId: user._id })
+          .select('phoneNumber')
+          .lean();
+
+        if (transporterProfile) {
+          profilePhoneNumber = transporterProfile.phoneNumber;
+          hasProfile = true;
+        } else {
+          // Check if user has a seller profile
+          const sellerProfile = await this.sellerModel
+            .findOne({ userId: user._id })
+            .select('phoneNumber')
+            .lean();
+
+          if (sellerProfile) {
+            profilePhoneNumber = sellerProfile.phoneNumber;
+            hasProfile = true;
+          }
+        }
+
+        // Only include phoneNumber if user has a transporter or seller profile
+        if (hasProfile) {
+          return {
+            ...user,
+            phoneNumber: profilePhoneNumber,
+          };
+        } else {
+          // Return user without phoneNumber field for admin/buyer users
+          return {
+            ...user,
+          };
+        }
+      })
+    );
+
+    return usersWithProfiles;
   }
 
   async getTotalUsers(searchFilter: unknown) {

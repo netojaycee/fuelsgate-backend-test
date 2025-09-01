@@ -1,0 +1,42 @@
+<!-- truck-status-admin-notification.html -->
+<table width="100%" cellpadding="0" cellspacing="0"
+    style="background:#fff; font-family: 'Inter', Arial, sans-serif; margin:0; padding:0;">
+    <tr>
+        <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:auto; background:#fff;">
+                <tr>
+                    <td style="padding: 32px 24px 0 24px;">
+                        <p style="font-size:16px; color:#444; margin:0 0 20px 0;">Dear Admin,</p>
+                        <h1 style="font-size:22px; font-weight:700; color:#444; margin:0 0 20px 0;">{{HeaderTitle}}</h1>
+
+                        <div style="border-left: 4px solid #b1976b; padding-left: 16px; margin: 0 0 24px 0;">
+                            <p style="font-size:16px; color:#444; margin:0;">{{Description}}</p>
+                        </div>
+
+                        <!-- Dynamic Truck Details Table -->
+                        {{TruckDetailsHtml}}
+
+                        <p style="font-size:16px; color:#444; margin:0 0 24px 0;">
+                            Please review this request and take appropriate action through the admin dashboard.
+                        </p>
+
+                        <!-- Action Button -->
+                        <div style="text-align:center; margin:0 0 24px 0;">
+                            <a href="{{AdminDashboardUrl}}"
+                                style="display:inline-block; background:#b1976b; color:#fff; font-size:16px; font-weight:600; border-radius:8px; padding:12px 24px; text-decoration:none; box-shadow:0 4px 12px rgba(177,151,107,0.10);">
+                                Review in Admin Dashboard
+                            </a>
+                        </div>
+
+                       
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {{footer_html}}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

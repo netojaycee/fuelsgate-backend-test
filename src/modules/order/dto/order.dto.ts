@@ -1,25 +1,39 @@
-import { Types } from "mongoose";
-import { QueryDto } from "src/shared/types";
-
-export type OrderStatus = 'awaiting-approval' | 'in-progress' | 'completed' | 'cancelled';
-
-export interface OrderDto {
-  sellerId?: string | Types.ObjectId;
-  buyerId?: string | Types.ObjectId;
-  productUploadId?: string | Types.ObjectId;
-  price: number
-  trackingId: string
-  status: OrderStatus
-  volume: number
-  expiresIn: Date
-  isRated?: boolean
-
+export class OrderDto {
+    buyerId: string;
+    profileId: string;
+    profileType: 'seller' | 'transporter';
+    type: 'product' | 'truck';
+    productUploadId?: string;
+    truckId?: string;
+    price?: number;
+    volume?: number;
+    destination?: string;
+    state?: string;
+    city?: string;
+    loadingDepot?: string;
+    loadingDate?: Date;
+    arrivalTime?: Date;
+    status?: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+    rfqStatus?: 'pending' | 'sent' | 'accepted' | 'rejected';
 }
 
-export interface OrderQueryDto extends QueryDto {
-  trackingId: string
-  status: OrderStatus
-  buyerId: string
-  sellerId: string
-  productUploadId: string
+export class OrderQueryDto {
+    buyerId?: string;
+    profileId?: string;
+    type?: 'product' | 'truck';
+    status?: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+}
+
+
+
+
+
+export interface OrderUpdateDto {
+    type: 'product' | 'truck';
+    description: 'sending_rfq' | 'accepting_order' | 'rejecting_order' | 'order_to_in_progress' | 'order_to_completed';
+    price?: number | null;
+    offerPrice?: number | null;
+    arrivalTime?: Date | null;
+    status?: 'pending' | 'in-progress' | 'completed' | 'cancelled' | null;
+    rfqStatus?: 'pending' | 'sent' | 'accepted' | 'rejected' | null;
 }

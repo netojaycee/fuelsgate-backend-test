@@ -9,18 +9,18 @@ import { Truck } from '../entities/truck.entity';
 import { TruckDto } from '../dto/truck.dto';
 import { MongoServerError } from 'mongodb';
 import { isValidObjectId } from 'mongoose';
-import { TruckOrder } from 'src/modules/truck-order/entities/truck-order.entity';
 import { Transporter } from 'src/modules/transporter/entities/transporter.entity';
 import { Seller } from 'src/modules/seller/entities/seller.entity';
+import { Order } from 'src/modules/order/entities/order.entity';
 
 
 const transporterTruckFilter = (transporterId: Types.ObjectId) => ({
-  profileType: 'Transporter',
+  profileType: 'transporter',
   profileId: transporterId,
 });
 
 const lockedTransporterTruckFilter = (transporterId: Types.ObjectId) => ({
-  profileType: 'Transporter',
+  profileType: 'transporter',
   profileId: transporterId,
   // status: { $in: ['pending', 'in-progress'] },
   status: { $in: ['locked'] },
@@ -31,8 +31,8 @@ export class TruckRepository {
   constructor(
     @InjectModel(Truck.name)
     private truckModel: Model<Truck>,
-    @InjectModel(TruckOrder.name)
-    private truckOrderModel: Model<TruckOrder>,
+    @InjectModel(Order.name)
+    private truckOrderModel: Model<Order>,
     @InjectModel(Transporter.name)
     private transporterModel: Model<Transporter>,
     @InjectModel(Seller.name)
@@ -48,7 +48,7 @@ export class TruckRepository {
       .skip(offset)
       .limit(limit)
       .lean()
-      .sort({ status: 'desc' })
+      .sort({ createdAt: -1 })
       .populate('depotHubId')
       .populate('productId');
 
@@ -57,12 +57,12 @@ export class TruckRepository {
 
     const populatedTrucks = await Promise.all(
       trucks.map(async (truck) => {
-        if (truck.profileType === 'Transporter') {
+        if (truck.profileType === 'transporter') {
           const transporter = await this.transporterModel
             .findById(truck.profileId)
             .lean();
           return { ...truck, profileId: transporter };
-        } else if (truck.profileType === 'Seller') {
+        } else if (truck.profileType === 'seller') {
           const seller = await this.sellerModel
             .findById(truck.profileId)
             .lean();
@@ -176,6 +176,7 @@ export class TruckRepository {
 
   async update(truckId: string | Types.ObjectId, truckData: Partial<TruckDto>) {
     try {
+      console.log('Updating truck with ID:', truckId, 'Data:', truckData);
       const updatedTruck = await this.truckModel.findByIdAndUpdate(
         truckId,
         { $set: truckData },

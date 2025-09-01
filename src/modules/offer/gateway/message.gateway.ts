@@ -13,7 +13,7 @@ import { forwardRef, Inject } from '@nestjs/common';
 import { OfferDto } from '../dto/offer.dto';
 import { OfferService } from '../services/offer.service';
 
-@WebSocketGateway({ cors: true })
+// @WebSocketGateway({ cors: true })
 export class MessageGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   constructor(
