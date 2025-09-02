@@ -38,6 +38,7 @@ import { NegotiationModule } from './modules/negotiation/negotiation.module';
 import { OrderModule } from './modules/order/order.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { TransportFareModule } from './modules/transport-fare/transport-fare.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     OrderModule,
     SocketModule,
     NotificationModule,
+    TransportFareModule,
   ],
   controllers: [AppController], providers: [
     AppService,

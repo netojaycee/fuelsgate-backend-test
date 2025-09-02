@@ -56,7 +56,7 @@ export class ProductUploadRepository {
     const orders = ongoingOrders.map((order) => ({
       productUploadId: order.productUploadId.toString(),
       orderId: order._id.toString(),
-      buyerId: order.buyerId?.toString(),
+      buyerId: order.buyerId ? order.buyerId.toString() : null,
       volume: order.volume,
       status: order.status,
     }));
