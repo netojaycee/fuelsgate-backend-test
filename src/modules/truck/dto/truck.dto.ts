@@ -20,6 +20,18 @@ export interface TruckDto {
   truckOwner?: string;
   ownerLogo?: string;
   loadStatus?: "loaded" | "unloaded";
+  // Optional flatbed / metadata fields
+  deckLengthFt?: string;
+  deckWidthFt?: string;
+  maxPayloadKg?: string;
+  notes?: string;
+  country?: string;
+  address?: string;
+  flatbedSubtype?: string;
+  equipment?: string[];
+  preferredCargoTypes?: string[];
+  truckFuelType?: 'diesel' | 'cng';
+  truckAge?: string;
 }
 
 export interface TruckQueryDto extends QueryDto {
@@ -32,4 +44,15 @@ export interface TruckQueryDto extends QueryDto {
   loadStatus?: string; // New field for load status
   currentState?: string;
   currentCity?: string;
+    locationId?: string;
+    truckFuelType?: 'diesel' | 'cng';
+    truckAge?: string;
+
+  // New searchable fields
+  flatbedSubtype?: string;
+  equipment?: string; // comma-separated
+  preferredCargoTypes?: string; // comma-separated
+  deckLengthFt?: string;
+  deckWidthFt?: string;
+  maxPayloadKg?: string;
 }

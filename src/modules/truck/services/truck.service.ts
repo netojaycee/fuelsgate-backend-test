@@ -85,14 +85,14 @@ export class TruckService {
       }
 
       // If flatbed, require currentState/currentCity, skip depotHub/product
-      if (truckData.truckType === 'flatbed') {
+      if (truckData.truckType !== 'tanker') {
         if (!truckData.currentState || !truckData.currentCity || !truckData.truckNumber) {
           throw new BadRequestException("currentState, currentCity, and truckNumber are required for flatbed trucks");
         }
         // Create the truck
         const newTruck = await this.truckRepository.create({
           ...truckData,
-          truckType: 'flatbed',
+          truckType: truckData.truckType,
         });
         // Send admin notification email for vetting/activation (only for non-admin created trucks)
         if (user.role !== 'admin') {
@@ -113,7 +113,7 @@ export class TruckService {
             const truckTypeLabel = (newTruck.truckType || truckData.truckType || '').toUpperCase();
             const headerTitle = `${truckTypeLabel} Truck Added - Vetting & Activation Required`;
             let description = `A new ${truckTypeLabel.toLowerCase()} truck has been added to the platform and requires your vetting and activation before it can be made available for use.`;
-            if (truckTypeLabel === 'FLATBED') {
+            if (truckTypeLabel !== 'TANKER') {
               description += ` Location: ${newTruck.currentState || truckData.currentState || ''}, ${newTruck.currentCity || truckData.currentCity || ''}.`;
             } else if (truckTypeLabel === 'TANKER') {
               description += ` Capacity: ${newTruck.capacity || ''}, Load Status: ${newTruck.loadStatus || ''}, Depot: ${newTruck.depot || ''}.`;
@@ -121,7 +121,7 @@ export class TruckService {
             // Build truck details table HTML
             let truckDetailsHtml = `<div style="background:#f9f9f9; border-radius:8px; padding:20px; margin:0 0 24px 0;">
               <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 0 8px;">`;
-            if (truckTypeLabel === 'FLATBED') {
+            if (truckTypeLabel !== 'TANKER') {
               truckDetailsHtml += `
                 <tr><td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Owner:</td><td style="padding:8px 0; color:#666;">${ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown'}</td></tr>
                 <tr><td style="padding:8px 0; color:#444; font-weight:600;">Owner Email:</td><td style="padding:8px 0; color:#666;">${ownerUser ? ownerUser.email : 'Unknown'}</td></tr>
@@ -229,12 +229,13 @@ export class TruckService {
   }
 
   async getAllTrucks(query: TruckQueryDto, user: IJwtPayload) {
-  const { page = 1, limit = 10, search, profileId, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity } = query;
+  const { page = 1, limit = 10, search, profileId, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity,
+    flatbedSubtype, equipment, preferredCargoTypes, deckLengthFt, deckWidthFt, maxPayloadKg, locationId } = query;
     let offset = 0;
     if (page && page > 0) {
       offset = (page - 1) * limit;
     }
-
+console.log(query)
     const searchFilter: any = {
       $or: [],
       $and: [],
@@ -264,10 +265,33 @@ export class TruckService {
     if (currentState) {
       searchFilter.$and.push({ currentState: { $regex: `^${currentState}$`, $options: 'i' } });
     }
+
+    
+       if (locationId) {
+      searchFilter.$and.push({ currentState: { $regex: `^${"Lagos"}$`, $options: 'i' } });
+    }
     // Filter by currentCity (case-insensitive)
     if (currentCity) {
       searchFilter.$and.push({ currentCity: { $regex: `^${currentCity}$`, $options: 'i' } });
     }
+    // Flatbed subtype
+    if (flatbedSubtype) {
+      searchFilter.$and.push({ flatbedSubtype: { $regex: `^${flatbedSubtype}$`, $options: 'i' } });
+    }
+    // Equipment (comma-separated) - match any
+    if (equipment) {
+      const eqArr = equipment.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      if (eqArr.length) searchFilter.$and.push({ equipment: { $in: eqArr } });
+    }
+    // Preferred cargo types (comma-separated)
+    if (preferredCargoTypes) {
+      const pcArr = preferredCargoTypes.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      if (pcArr.length) searchFilter.$and.push({ preferredCargoTypes: { $in: pcArr } });
+    }
+    // Deck and payload filters
+    if (deckLengthFt) searchFilter.$and.push({ deckLengthFt: { $regex: `^${deckLengthFt}$`, $options: 'i' } });
+    if (deckWidthFt) searchFilter.$and.push({ deckWidthFt: { $regex: `^${deckWidthFt}$`, $options: 'i' } });
+    if (maxPayloadKg) searchFilter.$and.push({ maxPayloadKg: { $regex: `^${maxPayloadKg}$`, $options: 'i' } });
     // Filter by loadStatus (exact/in)
     if (loadStatus) {
       const loadStatusArray = loadStatus.split(',').map(s => s.trim()).filter(s => s.length > 0);
@@ -338,7 +362,8 @@ export class TruckService {
   }
   async getAllPublicTrucks(query: TruckQueryDto) {
 
-    const { page = 1, limit = 10, search, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity } = query;
+    const { page = 1, limit = 10, search, status, depotHubId, productId, size, loadStatus, truckType, currentState, currentCity,
+      flatbedSubtype, equipment, preferredCargoTypes, deckLengthFt, deckWidthFt, maxPayloadKg, locationId } = query;
 
     let offset = 0;
     if (page && page > 0) {
@@ -378,10 +403,33 @@ export class TruckService {
     if (currentState) {
       searchFilter.$and.push({ currentState: { $regex: `^${currentState}$`, $options: 'i' } });
     }
+
+     if (locationId) {
+      searchFilter.$and.push({ currentState: { $regex: `^${locationId}$`, $options: 'i' } });
+    }
     // Filter by currentCity (case-insensitive)
     if (currentCity) {
       searchFilter.$and.push({ currentCity: { $regex: `^${currentCity}$`, $options: 'i' } });
     }
+
+    // Flatbed subtype
+    if (flatbedSubtype) {
+      searchFilter.$and.push({ flatbedSubtype: { $regex: `^${flatbedSubtype}$`, $options: 'i' } });
+    }
+    // Equipment (comma-separated) - match any
+    if (equipment) {
+      const eqArr = equipment.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      if (eqArr.length) searchFilter.$and.push({ equipment: { $in: eqArr } });
+    }
+    // Preferred cargo types (comma-separated)
+    if (preferredCargoTypes) {
+      const pcArr = preferredCargoTypes.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      if (pcArr.length) searchFilter.$and.push({ preferredCargoTypes: { $in: pcArr } });
+    }
+    // Deck and payload filters
+    if (deckLengthFt) searchFilter.$and.push({ deckLengthFt: { $regex: `^${deckLengthFt}$`, $options: 'i' } });
+    if (deckWidthFt) searchFilter.$and.push({ deckWidthFt: { $regex: `^${deckWidthFt}$`, $options: 'i' } });
+    if (maxPayloadKg) searchFilter.$and.push({ maxPayloadKg: { $regex: `^${maxPayloadKg}$`, $options: 'i' } });
 
     if (depotHubId) {
       const depotHub = await this.depotHubRepository.findOne(depotHubId)

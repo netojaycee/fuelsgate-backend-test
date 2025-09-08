@@ -1,3 +1,4 @@
+import { CalculateFareDto } from './../dto/calculate-fare.dto';
 import {
   Controller,
   Post,
@@ -10,7 +11,7 @@ import {
   Response,
 } from '@nestjs/common';
 import { TransportFareService } from '../services/transport-fare.service';
-import { CalculateFareDto, BulkUploadDistanceDto, CreateLoadPointDto } from '../dto/calculate-fare.dto';
+import { BulkUploadDistanceDto, CreateLoadPointDto } from '../dto/calculate-fare.dto';
 import { CreateTransportConfigDto, UpdateTransportConfigDto } from '../dto/transport-config.dto';
 import { Public } from 'src/shared/decorators/public.route.decorator';
 
@@ -24,7 +25,9 @@ export class TransportFareController {
     @Body() calculateFareDto: CalculateFareDto,
     @Response() res,
   ) {
+    console.log(calculateFareDto);
     const result = await this.transportFareService.calculateTankerFare(calculateFareDto);
+    console.log(result, "result")
     return res.status(200).json({
       message: 'Fare calculated successfully',
       data: result,
@@ -181,31 +184,31 @@ export class TransportFareController {
   }
 
   // Seeding endpoints
-  @Post('admin/seed/configs')
-  async seedDefaultConfigs(
-    @Request() req,
-    @Response() res,
-  ) {
-    // const { user } = req;
-    await this.transportFareService.seedDefaultConfigs();
-    return res.status(200).json({
-      message: 'Default configurations seeded successfully',
-      data: null,
-      statusCode: 200,
-    });
-  }
+  // @Post('admin/seed/configs')
+  // async seedDefaultConfigs(
+  //   @Request() req,
+  //   @Response() res,
+  // ) {
+  //   // const { user } = req;
+  //   await this.transportFareService.seedDefaultConfigs();
+  //   return res.status(200).json({
+  //     message: 'Default configurations seeded successfully',
+  //     data: null,
+  //     statusCode: 200,
+  //   });
+  // }
 
-  @Post('admin/seed/load-point')
-  async seedDefaultLoadPoint(
-    @Request() req,
-    @Response() res,
-  ) {
-    // const { user } = req;
-    await this.transportFareService.seedDefaultLoadPoint();
-    return res.status(200).json({
-      message: 'Default load point seeded successfully',
-      data: null,
-      statusCode: 200,
-    });
-  }
+  // @Post('admin/seed/load-point')
+  // async seedDefaultLoadPoint(
+  //   @Request() req,
+  //   @Response() res,
+  // ) {
+  //   // const { user } = req;
+  //   await this.transportFareService.seedDefaultLoadPoint();
+  //   return res.status(200).json({
+  //     message: 'Default load point seeded successfully',
+  //     data: null,
+  //     statusCode: 200,
+  //   });
+  // }
 }

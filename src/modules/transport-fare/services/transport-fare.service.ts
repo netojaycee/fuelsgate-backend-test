@@ -8,6 +8,7 @@ import { CalculateFareDto, BulkUploadDistanceDto, CreateLoadPointDto, TruckType 
 import { CreateTransportConfigDto, UpdateTransportConfigDto } from '../dto/transport-config.dto';
 import { DatabaseDistanceService } from './database-distance.service';
 import { FareCalculationResult, ConfigParameters } from '../interfaces/distance-service.interface';
+import { Truck } from 'src/modules/truck/entities/truck.entity';
 
 @Injectable()
 export class TransportFareService {
@@ -18,83 +19,198 @@ export class TransportFareService {
     private readonly locationDistanceModel: Model<LocationDistance>,
     @InjectModel(LoadPoint.name)
     private readonly loadPointModel: Model<LoadPoint>,
+    @InjectModel(Truck.name)
+    private readonly truckModel: Model<Truck>,
     private readonly databaseDistanceService: DatabaseDistanceService,
   ) {}
 
+  // async calculateTankerFare(calculateFareDto: CalculateFareDto): Promise<FareCalculationResult> {
+  //   const { truckCapacity, truckType, deliveryState, deliveryLGA, loadPoint } = calculateFareDto;
+
+  //   // Only handle tanker calculations for now
+  //   if (truckType !== TruckType.TANKER) {
+  //     throw new BadRequestException('Fare calculation currently only supports tanker trucks');
+  //   }
+
+  //   // Get distance from load point to delivery location
+  //   const deliveryLocation = `${deliveryState}, ${deliveryLGA}`;
+  //   const distance = await this.databaseDistanceService.getDistance(deliveryLocation, loadPoint);
+
+  //   // Get configuration parameters
+  //   const configParams = await this.getConfigParameters();
+
+  //   // Calculate fixed costs per trip
+  //   const driverTripAllowance = truckCapacity * configParams.fixedCostMultiplier;
+  //   const sundryCharges = truckCapacity * configParams.fixedCostMultiplier;
+  //   const insuranceCost = truckCapacity * configParams.fixedCostMultiplier;
+  //   const totalFixedPerTrip = driverTripAllowance + sundryCharges + insuranceCost;
+  //   const fixedCostPerKm = totalFixedPerTrip / distance;
+
+  //   // Calculate variable costs per km
+  //   const dieselCostPerKmMin = configParams.dieselPrice * configParams.fuelConsumptionMin;
+  //   const dieselCostPerKmMax = configParams.dieselPrice * configParams.fuelConsumptionMax;
+  //   const variableCostPerKmMin = dieselCostPerKmMin + configParams.maintenanceCost;
+  //   const variableCostPerKmMax = dieselCostPerKmMax + configParams.maintenanceCost;
+
+  //   // Total cost per km
+  //   const totalCostPerKmMin = variableCostPerKmMin + fixedCostPerKm;
+  //   const totalCostPerKmMax = variableCostPerKmMax + fixedCostPerKm;
+
+  //   // Rate (₦/litre/km) with profit margin
+  //   const rateMin = (totalCostPerKmMin / truckCapacity) * (1 + configParams.profitMargin);
+  //   const rateMax = (totalCostPerKmMax / truckCapacity) * (1 + configParams.profitMargin);
+
+  //   // Freight Rate
+  //   const freightRateMin = truckCapacity * distance * rateMin;
+  //   const freightRateMax = truckCapacity * distance * rateMax;
+
+  //   // Delivery Diesel Quantity and Cost (round trip)
+  //   const dieselQuantityMin = 2 * distance * configParams.fuelConsumptionMin;
+  //   const dieselQuantityMax = 2 * distance * configParams.fuelConsumptionMax;
+  //   const dieselDeliveryCostMin = dieselQuantityMin * configParams.dieselPrice;
+  //   const dieselDeliveryCostMax = dieselQuantityMax * configParams.dieselPrice;
+
+  //   // Total Freight Rate
+  //   const totalFreightRateMin = freightRateMin + dieselDeliveryCostMin;
+  //   const totalFreightRateMax = freightRateMax + dieselDeliveryCostMax;
+
+  //   // Fare per litre
+  //   const minFarePerLitre = totalFreightRateMin / truckCapacity;
+  //   const maxFarePerLitre = totalFreightRateMax / truckCapacity;
+
+  //   return {
+  //     minFarePerLitre: Number(minFarePerLitre.toFixed(2)),
+  //     maxFarePerLitre: Number(maxFarePerLitre.toFixed(2)),
+  //     totalMin: Math.round(totalFreightRateMin),
+  //     totalMax: Math.round(totalFreightRateMax),
+  //     breakdowns: {
+  //       freightRateMin: Math.round(freightRateMin),
+  //       freightRateMax: Math.round(freightRateMax),
+  //       dieselDeliveryCostMin: Math.round(dieselDeliveryCostMin),
+  //       dieselDeliveryCostMax: Math.round(dieselDeliveryCostMax),
+  //       dieselQuantityMin: Math.round(dieselQuantityMin),
+  //       dieselQuantityMax: Math.round(dieselQuantityMax),
+  //       variableCostPerKmMin: Math.round(variableCostPerKmMin),
+  //       variableCostPerKmMax: Math.round(variableCostPerKmMax),
+  //       fixedCostPerKm: Math.round(fixedCostPerKm),
+  //       distance,
+  //       truckCapacity,
+  //     },
+  //   };
+  // }
+
   async calculateTankerFare(calculateFareDto: CalculateFareDto): Promise<FareCalculationResult> {
-    const { truckCapacity, truckType, deliveryState, deliveryLGA, loadPoint } = calculateFareDto;
+  const { truckCapacity, truckType, deliveryState, deliveryLGA, loadPoint, truckId } = calculateFareDto;
 
-    // Only handle tanker calculations for now
-    if (truckType !== TruckType.TANKER) {
-      throw new BadRequestException('Fare calculation currently only supports tanker trucks');
-    }
-
-    // Get distance from load point to delivery location
-    const deliveryLocation = `${deliveryState}, ${deliveryLGA}`;
-    const distance = await this.databaseDistanceService.getDistance(deliveryLocation, loadPoint);
-
-    // Get configuration parameters
-    const configParams = await this.getConfigParameters();
-
-    // Calculate fixed costs per trip
-    const driverTripAllowance = truckCapacity * configParams.fixedCostMultiplier;
-    const sundryCharges = truckCapacity * configParams.fixedCostMultiplier;
-    const insuranceCost = truckCapacity * configParams.fixedCostMultiplier;
-    const totalFixedPerTrip = driverTripAllowance + sundryCharges + insuranceCost;
-    const fixedCostPerKm = totalFixedPerTrip / distance;
-
-    // Calculate variable costs per km
-    const dieselCostPerKmMin = configParams.dieselPrice * configParams.fuelConsumptionMin;
-    const dieselCostPerKmMax = configParams.dieselPrice * configParams.fuelConsumptionMax;
-    const variableCostPerKmMin = dieselCostPerKmMin + configParams.maintenanceCost;
-    const variableCostPerKmMax = dieselCostPerKmMax + configParams.maintenanceCost;
-
-    // Total cost per km
-    const totalCostPerKmMin = variableCostPerKmMin + fixedCostPerKm;
-    const totalCostPerKmMax = variableCostPerKmMax + fixedCostPerKm;
-
-    // Rate (₦/litre/km) with profit margin
-    const rateMin = (totalCostPerKmMin / truckCapacity) * (1 + configParams.profitMargin);
-    const rateMax = (totalCostPerKmMax / truckCapacity) * (1 + configParams.profitMargin);
-
-    // Freight Rate
-    const freightRateMin = truckCapacity * distance * rateMin;
-    const freightRateMax = truckCapacity * distance * rateMax;
-
-    // Delivery Diesel Quantity and Cost (round trip)
-    const dieselQuantityMin = 2 * distance * configParams.fuelConsumptionMin;
-    const dieselQuantityMax = 2 * distance * configParams.fuelConsumptionMax;
-    const dieselDeliveryCostMin = dieselQuantityMin * configParams.dieselPrice;
-    const dieselDeliveryCostMax = dieselQuantityMax * configParams.dieselPrice;
-
-    // Total Freight Rate
-    const totalFreightRateMin = freightRateMin + dieselDeliveryCostMin;
-    const totalFreightRateMax = freightRateMax + dieselDeliveryCostMax;
-
-    // Fare per litre
-    const minFarePerLitre = totalFreightRateMin / truckCapacity;
-    const maxFarePerLitre = totalFreightRateMax / truckCapacity;
-
-    return {
-      minFarePerLitre: Number(minFarePerLitre.toFixed(2)),
-      maxFarePerLitre: Number(maxFarePerLitre.toFixed(2)),
-      totalMin: Math.round(totalFreightRateMin),
-      totalMax: Math.round(totalFreightRateMax),
-      breakdowns: {
-        freightRateMin: Math.round(freightRateMin),
-        freightRateMax: Math.round(freightRateMax),
-        dieselDeliveryCostMin: Math.round(dieselDeliveryCostMin),
-        dieselDeliveryCostMax: Math.round(dieselDeliveryCostMax),
-        dieselQuantityMin: Math.round(dieselQuantityMin),
-        dieselQuantityMax: Math.round(dieselQuantityMax),
-        variableCostPerKmMin: Math.round(variableCostPerKmMin),
-        variableCostPerKmMax: Math.round(variableCostPerKmMax),
-        fixedCostPerKm: Math.round(fixedCostPerKm),
-        distance,
-        truckCapacity,
-      },
-    };
+  if (truckType !== TruckType.TANKER) {
+    throw new BadRequestException('Fare calculation currently only supports tanker trucks');
   }
+
+  const deliveryLocation = `${deliveryState}, ${deliveryLGA}`;
+  const distance = await this.databaseDistanceService.getDistance(deliveryLocation, loadPoint);
+
+  // Get config parameters
+  const configParams = await this.getConfigParameters();
+
+  // Determine fuel consumption rates
+  let fuelConsumptionMin = configParams.fuelConsumptionMin;
+  let fuelConsumptionMax = configParams.fuelConsumptionMax;
+
+  if (truckId) {
+    // Fetch truck and calculate age
+    const truck = await this.truckModel.findById(truckId);
+    if (!truck) throw new NotFoundException('Truck not found');
+    const truckAge = truck.truckAge ? Number(truck.truckAge) : null; // assuming truck.year exists
+    const truckFuelType = truck.truckFuelType || 'diesel'; // assuming truck.truckFuelType exists
+
+    // let truckAge = null;
+    // if (truckYear) {
+    //   const currentYear = new Date().getFullYear();
+    //   truckAge = currentYear - truckYear;
+    // }
+
+    if (truckFuelType === 'diesel') {
+      if (truckAge !== null) {
+        if (truckAge < 7) {
+          fuelConsumptionMin = 0.29;
+          fuelConsumptionMax = 0.38;
+        } else if (truckAge >= 7 && truckAge <= 15) {
+          fuelConsumptionMin = 0.38;
+          fuelConsumptionMax = 0.45;
+        } else if (truckAge > 15) {
+          fuelConsumptionMin = 0.45;
+          fuelConsumptionMax = 0.6;
+        }
+      }
+      // else use config defaults
+    } else if (truckFuelType === 'cng') {
+      // SUGGESTION: Use lower values for CNG trucks
+      fuelConsumptionMin = 0.18;
+      fuelConsumptionMax = 0.25;
+    }
+  }
+
+  // ...existing calculation logic, but use fuelConsumptionMin and fuelConsumptionMax...
+
+  // Calculate fixed costs per trip
+  const driverTripAllowance = truckCapacity * configParams.fixedCostMultiplier;
+  const sundryCharges = truckCapacity * configParams.fixedCostMultiplier;
+  const insuranceCost = truckCapacity * configParams.fixedCostMultiplier;
+  const totalFixedPerTrip = driverTripAllowance + sundryCharges + insuranceCost;
+  const fixedCostPerKm = totalFixedPerTrip / distance;
+
+  // Calculate variable costs per km
+  const dieselCostPerKmMin = configParams.dieselPrice * fuelConsumptionMin;
+  const dieselCostPerKmMax = configParams.dieselPrice * fuelConsumptionMax;
+  const variableCostPerKmMin = dieselCostPerKmMin + configParams.maintenanceCost;
+  const variableCostPerKmMax = dieselCostPerKmMax + configParams.maintenanceCost;
+
+  // Total cost per km
+  const totalCostPerKmMin = variableCostPerKmMin + fixedCostPerKm;
+  const totalCostPerKmMax = variableCostPerKmMax + fixedCostPerKm;
+
+  // Rate (₦/litre/km) with profit margin
+  const rateMin = (totalCostPerKmMin / truckCapacity) * (1 + configParams.profitMargin);
+  const rateMax = (totalCostPerKmMax / truckCapacity) * (1 + configParams.profitMargin);
+
+  // Freight Rate
+  const freightRateMin = truckCapacity * distance * rateMin;
+  const freightRateMax = truckCapacity * distance * rateMax;
+
+  // Delivery Diesel Quantity and Cost (round trip)
+  const dieselQuantityMin = 2 * distance * fuelConsumptionMin;
+  const dieselQuantityMax = 2 * distance * fuelConsumptionMax;
+  const dieselDeliveryCostMin = dieselQuantityMin * configParams.dieselPrice;
+  const dieselDeliveryCostMax = dieselQuantityMax * configParams.dieselPrice;
+
+  // Total Freight Rate
+  const totalFreightRateMin = freightRateMin + dieselDeliveryCostMin;
+  const totalFreightRateMax = freightRateMax + dieselDeliveryCostMax;
+
+  // Fare per litre
+  const minFarePerLitre = totalFreightRateMin / truckCapacity;
+  const maxFarePerLitre = totalFreightRateMax / truckCapacity;
+
+  return {
+    minFarePerLitre: Number(minFarePerLitre.toFixed(2)),
+    maxFarePerLitre: Number(maxFarePerLitre.toFixed(2)),
+    totalMin: Math.round(totalFreightRateMin),
+    totalMax: Math.round(totalFreightRateMax),
+    breakdowns: {
+      freightRateMin: Math.round(freightRateMin),
+      freightRateMax: Math.round(freightRateMax),
+      dieselDeliveryCostMin: Math.round(dieselDeliveryCostMin),
+      dieselDeliveryCostMax: Math.round(dieselDeliveryCostMax),
+      dieselQuantityMin: Math.round(dieselQuantityMin),
+      dieselQuantityMax: Math.round(dieselQuantityMax),
+      variableCostPerKmMin: Math.round(variableCostPerKmMin),
+      variableCostPerKmMax: Math.round(variableCostPerKmMax),
+      fixedCostPerKm: Math.round(fixedCostPerKm),
+      distance,
+      truckCapacity,
+    },
+  };
+}
 
   private async getConfigParameters(): Promise<ConfigParameters> {
     const configs = await this.configModel.find();
@@ -105,7 +221,7 @@ export class TransportFareService {
 
     return {
       dieselPrice: configMap['diesel_price'] || 1100,
-      fuelConsumptionMin: configMap['fuel_consumption_min'] || 0.22,
+      fuelConsumptionMin: configMap['fuel_consumption_min'] || 0.40,
       fuelConsumptionMax: configMap['fuel_consumption_max'] || 0.6,
       maintenanceCost: configMap['maintenance_cost'] || 200,
       profitMargin: configMap['profit_margin'] || 0.4,
@@ -264,37 +380,37 @@ export class TransportFareService {
   }
 
   // Seeding methods
-  async seedDefaultConfigs(): Promise<void> {
-    const defaultConfigs = [
-      { key: 'diesel_price', value: 1100, description: 'Current diesel price per litre', category: 'fuel' },
-      { key: 'fuel_consumption_min', value: 0.22, description: 'Minimum fuel consumption (litres/km)', category: 'fuel' },
-      { key: 'fuel_consumption_max', value: 0.6, description: 'Maximum fuel consumption (litres/km)', category: 'fuel' },
-      { key: 'maintenance_cost', value: 200, description: 'Maintenance cost per km', category: 'maintenance' },
-      { key: 'profit_margin', value: 0.4, description: 'Profit margin (40%)', category: 'profit' },
-      { key: 'fixed_cost_multiplier', value: 1, description: 'Fixed cost multiplier for DTA/SC/IC', category: 'fixed_costs' },
-    ];
+  // async seedDefaultConfigs(): Promise<void> {
+  //   const defaultConfigs = [
+  //     { key: 'diesel_price', value: 1100, description: 'Current diesel price per litre', category: 'fuel' },
+  //     { key: 'fuel_consumption_min', value: 0.40, description: 'Minimum fuel consumption (litres/km)', category: 'fuel' },
+  //     { key: 'fuel_consumption_max', value: 0.6, description: 'Maximum fuel consumption (litres/km)', category: 'fuel' },
+  //     { key: 'maintenance_cost', value: 200, description: 'Maintenance cost per km', category: 'maintenance' },
+  //     { key: 'profit_margin', value: 0.4, description: 'Profit margin (40%)', category: 'profit' },
+  //     { key: 'fixed_cost_multiplier', value: 1, description: 'Fixed cost multiplier for DTA/SC/IC', category: 'fixed_costs' },
+  //   ];
 
-    for (const config of defaultConfigs) {
-      await this.configModel.findOneAndUpdate(
-        { key: config.key },
-        config,
-        { upsert: true, new: true }
-      );
-    }
-  }
+  //   for (const config of defaultConfigs) {
+  //     await this.configModel.findOneAndUpdate(
+  //       { key: config.key },
+  //       config,
+  //       { upsert: true, new: true }
+  //     );
+  //   }
+  // }
 
-  async seedDefaultLoadPoint(): Promise<void> {
-    const defaultLoadPoint = {
-      name: 'Ibeju_Dangote',
-      displayName: 'Ibeju Dangote',
-      state: 'Lagos',
-      lga: 'Ibeju-Lekki',
-    };
+  // async seedDefaultLoadPoint(): Promise<void> {
+  //   const defaultLoadPoint = {
+  //     name: 'Ibeju_Dangote',
+  //     displayName: 'Ibeju Dangote',
+  //     state: 'Lagos',
+  //     lga: 'Ibeju-Lekki',
+  //   };
 
-    await this.loadPointModel.findOneAndUpdate(
-      { name: defaultLoadPoint.name },
-      defaultLoadPoint,
-      { upsert: true, new: true }
-    );
-  }
+  //   await this.loadPointModel.findOneAndUpdate(
+  //     { name: defaultLoadPoint.name },
+  //     defaultLoadPoint,
+  //     { upsert: true, new: true }
+  //   );
+  // }
 }

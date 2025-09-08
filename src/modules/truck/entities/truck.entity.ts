@@ -50,8 +50,42 @@ export class Truck {
   @Prop({ required: true, enum: ['pending', 'available', 'locked'], default: 'pending' })
   status: string;
 
-  @Prop({ required: true, enum: ['tanker', 'flatbed'], default: 'tanker' })
+  @Prop({ required: true, enum: ['tanker', 'flatbed', 'stepdeck', 'dropdeck'], default: 'tanker' })
   truckType: string;
+
+   // --- New optional fields (flatbed / metadata) ---
+  @Prop({ required: false })
+  deckLengthFt?: string;
+
+  @Prop({ required: false })
+  deckWidthFt?: string;
+
+  @Prop({ required: false })
+  maxPayloadKg?: string;
+
+  @Prop({ required: false })
+  notes?: string;
+
+  @Prop({ required: false, default: 'Nigeria' })
+  country?: string;
+
+  @Prop({ required: false })
+  address?: string;
+
+  @Prop({ required: false })
+  flatbedSubtype?: string;
+
+  @Prop({ type: [String], required: false, default: [] })
+  equipment?: string[];
+
+  @Prop({ type: [String], required: false, default: [] })
+  preferredCargoTypes?: string[];
+
+  @Prop({ required: false })
+  truckAge?: string;
+
+  @Prop({ required: true, enum: ['diesel', 'cng'], default: 'diesel' })
+  truckFuelType?: string;
 }
 
 export const TruckSchema = SchemaFactory.createForClass(Truck);

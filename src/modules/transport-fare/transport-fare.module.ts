@@ -7,6 +7,7 @@ import { MapsDistanceService } from './services/maps-distance.service';
 import { TransportConfig, TransportConfigSchema } from './entities/transport-config.entity';
 import { LocationDistance, LocationDistanceSchema } from './entities/location-distance.entity';
 import { LoadPoint, LoadPointSchema } from './entities/load-point.entity';
+import { Truck, TruckSchema } from '../truck/entities/truck.entity';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LoadPoint, LoadPointSchema } from './entities/load-point.entity';
       { name: TransportConfig.name, schema: TransportConfigSchema },
       { name: LocationDistance.name, schema: LocationDistanceSchema },
       { name: LoadPoint.name, schema: LoadPointSchema },
+      { name: Truck.name, schema: TruckSchema },
     ]),
   ],
   controllers: [TransportFareController],
