@@ -9,9 +9,10 @@ export const truckSchema = yup.object({
     .string()
     .oneOf(['diesel', 'cng'], 'Truck fuel type must be one of: diesel, cng')
     .required('Truck fuel type is required'),
-  truckAge: yup
+  truckCategory: yup
     .string()
-    .required('Truck age is required'),
+    .oneOf(['A++', 'A', 'B', 'C'], 'Truck category must be one of: A++, A, B, C')
+    .required('Truck category is required'),
   truckNumber: yup
     .string()
     .required('Truck number is required'),

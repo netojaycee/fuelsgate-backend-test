@@ -3,6 +3,17 @@ import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
 export enum TruckType {
   TANKER = 'tanker',
   FLATBED = 'flatbed',
+  STEPDECK = 'stepdeck',
+  DROPDECK = 'dropdeck',
+
+}
+
+
+export enum TruckCategory {
+  A_PLUS_PLUS = 'A++',
+  A = 'A',
+  B = 'B',
+  C = 'C',
 }
 
 export class CalculateFareDto {
@@ -24,6 +35,9 @@ export class CalculateFareDto {
 
   @IsString()
   loadPoint: string; // e.g., 'Ibeju_Dangote' - where fuel is loaded FROM
+
+  @IsEnum(TruckCategory)
+  truckCategory: TruckCategory; // 'A++', 'A', 'B', 'C'
 }
 
 export class BulkUploadDistanceDto {

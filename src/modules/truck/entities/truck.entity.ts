@@ -81,8 +81,8 @@ export class Truck {
   @Prop({ type: [String], required: false, default: [] })
   preferredCargoTypes?: string[];
 
-  @Prop({ required: false })
-  truckAge?: string;
+  @Prop({ required: true, enum: ['A++', 'A', 'B', 'C'], default: 'A' })
+  truckCategory?: string;
 
   @Prop({ required: true, enum: ['diesel', 'cng'], default: 'diesel' })
   truckFuelType?: string;

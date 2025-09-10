@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { QueryDto } from "src/shared/types";
 
 export type TruckStatus = 'pending' | 'available' | 'locked';
-export type TruckType = 'flatbed' | 'tanker'
+export type TruckType = 'flatbed' | 'tanker' | 'stepdeck' | 'dropdeck';
 
 export interface TruckDto {
   truckType: TruckType;
@@ -31,7 +31,7 @@ export interface TruckDto {
   equipment?: string[];
   preferredCargoTypes?: string[];
   truckFuelType?: 'diesel' | 'cng';
-  truckAge?: string;
+    truckCategory?: 'A++' | 'A' | 'B' | 'C';
 }
 
 export interface TruckQueryDto extends QueryDto {
@@ -46,7 +46,7 @@ export interface TruckQueryDto extends QueryDto {
   currentCity?: string;
     locationId?: string;
     truckFuelType?: 'diesel' | 'cng';
-    truckAge?: string;
+    truckCategory?: 'A++' | 'A' | 'B' | 'C';
 
   // New searchable fields
   flatbedSubtype?: string;

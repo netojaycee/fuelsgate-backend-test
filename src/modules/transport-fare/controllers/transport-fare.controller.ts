@@ -105,7 +105,9 @@ export class TransportFareController {
     @Response() res,
   ) {
     // const { user } = req;
+    console.log(distances, "distances")
     const result = await this.transportFareService.bulkUploadDistances(distances);
+    // console.log(result, "result")
     return res.status(200).json({
       message: 'Distances uploaded successfully',
       data: result,

@@ -100,9 +100,8 @@ export class TransportFareService {
   // }
 
   async calculateTankerFare(calculateFareDto: CalculateFareDto): Promise<FareCalculationResult> {
-  const { truckCapacity, deliveryState, deliveryLGA, loadPoint, truckType, truckCategory} = calculateFareDto;
+  const { truckCapacity, deliveryState, deliveryLGA, loadPoint, truckId, truckCategory} = calculateFareDto;
 
-  console.log(truckType, "trucktype")
   // if (truckType !== TruckType.TANKER) {
   //   throw new BadRequestException('Fare calculation currently only supports tanker trucks');
   // }
@@ -118,26 +117,31 @@ export class TransportFareService {
   // Determine fuel consumption rates
   let fuelConsumptionMin = configParams.fuelConsumptionMin;
   let fuelConsumptionMax = configParams.fuelConsumptionMax;
-  // let resolvedTruckCategory = truckCategory;
+  let resolvedTruckCategory = truckCategory;
 
-  // if (truckId) {
-  //   const truck = await this.truckModel.findById(truckId);
-  //   if (!truck) throw new NotFoundException('Truck not found');
-  //   resolvedTruckCategory = truck.truckCategory as TruckCategory;
-    
-  // }
+  if (truckId) {
+    // Fetch truck and calculate age
+    const truck = await this.truckModel.findById(truckId);
+    if (!truck) throw new NotFoundException('Truck not found');
+    resolvedTruckCategory = truck.truckCategory as TruckCategory;
+    // let truckCategory = null;
+    // if (truckYear) {
+    //   const currentYear = new Date().getFullYear();
+    //   truckCategory = currentYear - truckYear;
+    // }
+  }
      // Category logic
-  if (truckCategory === TruckCategory.A_PLUS_PLUS) {
+  if (resolvedTruckCategory === TruckCategory.A_PLUS_PLUS) {
     // CNG rates
     fuelConsumptionMin = 0.18;
     fuelConsumptionMax = 0.25;
-  } else if (truckCategory === TruckCategory.A) {
+  } else if (resolvedTruckCategory === TruckCategory.A) {
     fuelConsumptionMin = 0.29;
     fuelConsumptionMax = 0.38;
-  } else if (truckCategory === TruckCategory.B) {
+  } else if (resolvedTruckCategory === TruckCategory.B) {
     fuelConsumptionMin = 0.38;
     fuelConsumptionMax = 0.45;
-  } else if (truckCategory === TruckCategory.C) {
+  } else if (resolvedTruckCategory === TruckCategory.C) {
     fuelConsumptionMin = 0.45;
     fuelConsumptionMax = 0.6;
   }
@@ -284,8 +288,6 @@ export class TransportFareService {
           skipped++;
           continue;
         }
-
-        console.log(distance, "distance record")
 
         // Clean and normalize the data
         const normalizedData = {
