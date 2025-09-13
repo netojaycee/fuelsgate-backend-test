@@ -100,9 +100,9 @@ export class TransportFareService {
   // }
 
   async calculateTankerFare(calculateFareDto: CalculateFareDto): Promise<FareCalculationResult> {
-  const { truckCapacity, deliveryState, deliveryLGA, loadPoint, truckType, truckCategory} = calculateFareDto;
-
-  console.log(truckType, "trucktype")
+  const {  deliveryState, deliveryLGA, loadPoint, truckType, truckCategory, fuelPricePerLitre} = calculateFareDto;
+  let { truckCapacity} = calculateFareDto;
+  // console.log(truckType, "trucktype")
   // if (truckType !== TruckType.TANKER) {
   //   throw new BadRequestException('Fare calculation currently only supports tanker trucks');
   // }
@@ -115,9 +115,14 @@ export class TransportFareService {
   // Get config parameters
   const configParams = await this.getConfigParameters();
 
+   if (truckType !== 'tanker') {
+    truckCapacity = Number(truckCapacity) * 1000;
+  }
+
   // Determine fuel consumption rates
   let fuelConsumptionMin = configParams.fuelConsumptionMin;
   let fuelConsumptionMax = configParams.fuelConsumptionMax;
+  let pricePerLitre = configParams.dieselPrice;
   // let resolvedTruckCategory = truckCategory;
 
   // if (truckId) {
@@ -129,17 +134,22 @@ export class TransportFareService {
      // Category logic
   if (truckCategory === TruckCategory.A_PLUS_PLUS) {
     // CNG rates
-    fuelConsumptionMin = 0.18;
-    fuelConsumptionMax = 0.25;
-  } else if (truckCategory === TruckCategory.A) {
-    fuelConsumptionMin = 0.29;
-    fuelConsumptionMax = 0.38;
-  } else if (truckCategory === TruckCategory.B) {
-    fuelConsumptionMin = 0.38;
-    fuelConsumptionMax = 0.45;
-  } else if (truckCategory === TruckCategory.C) {
-    fuelConsumptionMin = 0.45;
-    fuelConsumptionMax = 0.6;
+    fuelConsumptionMin = 0.46;
+    fuelConsumptionMax = 0.69;
+    pricePerLitre = fuelPricePerLitre ? Number(fuelPricePerLitre) : configParams.cngPrice;
+  }else {
+    // Diesel categories
+    if (truckCategory === 'A') {
+      fuelConsumptionMin = 0.29;
+      fuelConsumptionMax = 0.38;
+    } else if (truckCategory === 'B') {
+      fuelConsumptionMin = 0.38;
+      fuelConsumptionMax = 0.45;
+    } else if (truckCategory === 'C') {
+      fuelConsumptionMin = 0.45;
+      fuelConsumptionMax = 0.6;
+    }
+    pricePerLitre = fuelPricePerLitre ? Number(fuelPricePerLitre) : configParams.dieselPrice;
   }
   
 
@@ -153,10 +163,11 @@ export class TransportFareService {
   const fixedCostPerKm = totalFixedPerTrip / distance;
 
   // Calculate variable costs per km
-  const dieselCostPerKmMin = configParams.dieselPrice * fuelConsumptionMin;
-  const dieselCostPerKmMax = configParams.dieselPrice * fuelConsumptionMax;
-  const variableCostPerKmMin = dieselCostPerKmMin + configParams.maintenanceCost;
-  const variableCostPerKmMax = dieselCostPerKmMax + configParams.maintenanceCost;
+  const fuelCostPerKmMin = pricePerLitre * fuelConsumptionMin;
+  const fuelCostPerKmMax = pricePerLitre * fuelConsumptionMax;
+  const variableCostPerKmMin = fuelCostPerKmMin + configParams.maintenanceCost;
+  const variableCostPerKmMax = fuelCostPerKmMax + configParams.maintenanceCost;
+
 
   // Total cost per km
   const totalCostPerKmMin = variableCostPerKmMin + fixedCostPerKm;
@@ -214,6 +225,7 @@ export class TransportFareService {
 
     return {
       dieselPrice: configMap['diesel_price'] || 1100,
+      cngPrice: configMap['cng_price'] || 450,
       fuelConsumptionMin: configMap['fuel_consumption_min'] || 0.40,
       fuelConsumptionMax: configMap['fuel_consumption_max'] || 0.6,
       maintenanceCost: configMap['maintenance_cost'] || 200,

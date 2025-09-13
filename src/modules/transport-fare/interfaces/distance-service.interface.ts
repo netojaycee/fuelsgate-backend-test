@@ -24,6 +24,7 @@ export interface FareCalculationResult {
 
 export interface ConfigParameters {
   dieselPrice: number;
+  cngPrice: number;
   fuelConsumptionMin: number;
   fuelConsumptionMax: number;
   maintenanceCost: number;

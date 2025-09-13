@@ -218,6 +218,7 @@ export class TransportFareService {
 
     return {
       dieselPrice: configMap['diesel_price'] || 1100,
+      cngPrice: configMap['cng_price'] || 450,
       fuelConsumptionMin: configMap['fuel_consumption_min'] || 0.40,
       fuelConsumptionMax: configMap['fuel_consumption_max'] || 0.6,
       maintenanceCost: configMap['maintenance_cost'] || 200,

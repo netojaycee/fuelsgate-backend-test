@@ -21,6 +21,10 @@ export class CalculateFareDto {
   @IsString()
   truckId?: string;
 
+  @IsOptional()
+  @IsString()
+  fuelPricePerLitre?: string;
+
   @IsNumber()
   truckCapacity: number;
 
@@ -38,6 +42,8 @@ export class CalculateFareDto {
 
   @IsEnum(TruckCategory)
   truckCategory: TruckCategory; // 'A++', 'A', 'B', 'C'
+
+
 }
 
 export class BulkUploadDistanceDto {
