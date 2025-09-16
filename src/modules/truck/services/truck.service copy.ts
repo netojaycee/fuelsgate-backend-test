@@ -39,17 +39,10 @@ export class TruckService {
         throw new BadRequestException("truckType is required");
       }
 
-
       const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId);
+      const product = await this.productRepository.findOne(truckData.productId);
       if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
-      truckData.depotHubId = depotHub._id;
-      let product;
-      if (truckData.truckType === 'tanker') {
-        product = await this.productRepository.findOne(truckData.productId);
-        if (!product) throw new BadRequestException("Product ID is invalid");
-        truckData.productId = product._id;
-
-      }
+      if (!product) throw new BadRequestException("Product ID is invalid");
 
       // Set up profileId/profileType and status for all trucks
       if (user.role === 'admin') {
@@ -98,25 +91,14 @@ export class TruckService {
 
 
 
-      
+      if (truckData.truckType !== 'tanker') {
        
-        // // Create the truck
-        // const newTruck = await this.truckRepository.create({
-        //   ...truckData,
-        //   truckType: truckData.truckType,
-        // });
+        // Create the truck
+        const newTruck = await this.truckRepository.create({
+          ...truckData,
+          truckType: truckData.truckType,
+        });
         // Send admin notification email for vetting/activation (only for non-admin created trucks)
-      
- 
-
-      // If tanker, require depotHub/product
-
-      // truckData.productId = product._id;
-      // truckData.depotHubId = depotHub._id;
-      // truckData.truckType = 'tanker';
-      // Create the truck
-      const newTruck = await this.truckRepository.create(truckData);
-      // Send admin notification email for vetting/activation (only for non-admin created trucks)
         if (user.role !== 'admin') {
           try {
             let ownerProfile: any;
@@ -183,6 +165,56 @@ export class TruckService {
           }
         }
         return newTruck;
+      }
+
+      // If tanker, require depotHub/product
+
+      truckData.productId = product._id;
+      truckData.depotHubId = depotHub._id;
+      truckData.truckType = 'tanker';
+      // Create the truck
+      const newTruck = await this.truckRepository.create(truckData);
+      // Send admin notification email for vetting/activation (only for non-admin created trucks)
+      if (user.role !== 'admin') {
+        try {
+          let ownerProfile: any;
+          if (truckData.profileType === 'transporter') {
+            ownerProfile = await this.transporterRepository.findOne(truckData.profileId);
+          } else if (truckData.profileType === 'seller') {
+            ownerProfile = await this.sellerRepository.findOne(truckData.profileId);
+          }
+          let ownerUser: any = null;
+          if (ownerProfile) {
+            ownerUser = await this.userRepository.findOne(ownerProfile.userId);
+          }
+          const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@fuelsgate.com';
+          const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL}/dashboard/trucks`;
+          let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/truck-status-admin-notification.html'), 'utf8');
+          const headerTitle = 'New Truck Added - Vetting & Activation Required';
+          const description = 'A new truck has been added to the platform and requires your vetting and activation before it can be made available for use.';
+          generalHtml = generalHtml
+            .replace(/{{HeaderTitle}}/g, headerTitle)
+            .replace(/{{Description}}/g, description)
+            .replace(/{{TruckOwner}}/g, ownerUser ? `${ownerUser.firstName} ${ownerUser.lastName}` : 'Unknown')
+            .replace(/{{OwnerEmail}}/g, ownerUser ? ownerUser.email : 'Unknown')
+            .replace(/{{TruckNumber}}/g, newTruck.truckNumber)
+            .replace(/{{TruckCapacity}}/g, newTruck.capacity)
+            .replace(/{{Depot}}/g, newTruck.depot)
+            .replace(/{{CurrentStatus}}/g, newTruck.status)
+            .replace(/{{RequestedStatus}}/g, 'activation')
+            .replace(/{{LoadStatus}}/g, newTruck.loadStatus || 'Not specified')
+            .replace(/{{AdminDashboardUrl}}/g, adminDashboardUrl)
+            .replace(/{{RequestTime}}/g, new Date().toLocaleString());
+          await this.resendService.sendMail({
+            to: adminEmail,
+            subject: 'New Truck Created - Vetting & Activation Required',
+            html: getHtmlWithFooter(generalHtml),
+          });
+        } catch (error) {
+          console.error('Error sending admin notification email for new truck:', error);
+        }
+      }
+      return newTruck;
     } catch (error: any) {
       if (error?.code === 11000 && error?.keyPattern?.truckNumber) {
         throw new BadRequestException(`Truck number "${truckData.truckNumber}" already exists.`);
@@ -307,7 +339,7 @@ console.log(query)
   }
   async getAllPublicTrucks(query: TruckQueryDto) {
 
-    const { page = 1, limit = 10, search, status, depotHubId, productId, size, loadStatus, truckType } = query;
+    const { page = 1, limit = 10, search, status, depotHubId, productId, size, loadStatus, truckType, locationId } = query;
 
     let offset = 0;
     if (page && page > 0) {
@@ -345,7 +377,9 @@ console.log(query)
     }
   
 
-    
+     if (locationId) {
+      searchFilter.$and.push({ currentState: { $regex: `^${locationId}$`, $options: 'i' } });
+    }
     
     if (depotHubId) {
       const depotHub = await this.depotHubRepository.findOne(depotHubId)
@@ -494,11 +528,13 @@ console.log(query)
         throw new NotFoundException("Truck not found");
       }
 
+      // Handle admin updates
       if (user.role === 'admin') {
         // Admin can update any truck, including changing ownership (but not ownerId)
         if (truckData.ownerId && truckData.ownerId !== existingTruck.ownerId) {
           throw new BadRequestException("Admin cannot change the truck's ownerId. This operation is not allowed.");
         }
+
         // If admin is updating profile information, validate the new profile
         if (truckData.profileType && truckData.profileId) {
           if (truckData.profileType === 'transporter') {
@@ -511,17 +547,18 @@ console.log(query)
             truckData.profileId = seller._id;
           }
         } else if (truckData.profileType || truckData.profileId) {
+          // If only one is provided, throw error
           throw new BadRequestException("Both profileType and profileId must be provided together for admin updates");
         }
-        // For tanker, require loadStatus and productId
-        if (truckData.truckType === 'tanker') {
-          if (!truckData.loadStatus) throw new BadRequestException("loadStatus is required for tanker truck");
-          if (!truckData.productId) throw new BadRequestException("productId is required for tanker truck");
-        }
+
+        // Admin can update truckOwner and ownerLogo fields
+        // These fields will be passed through as-is if provided
+
       } else {
         // Non-admin users can only update their own trucks
         let userProfile: any;
         let userProfileId: string;
+
         if (user.role === 'transporter') {
           userProfile = await this.transporterRepository.findOneQuery({ userId: user.id });
           if (!userProfile) throw new ForbiddenException("Transporter profile not found");
@@ -533,38 +570,52 @@ console.log(query)
         } else {
           throw new ForbiddenException("You are not authorized to update trucks");
         }
+
+        // Check if user owns this truck
         if (existingTruck.profileId.toString() !== userProfileId) {
           throw new ForbiddenException("You can only update your own trucks");
         }
-        // Non-admin users cannot change profile information
+
+        // Non-admin users cannot change profile information, truckOwner, or ownerLogo
+        // if (truckData.profileType || truckData.profileId) {
+        //   throw new ForbiddenException("You cannot change truck ownership information");
+        // }
+        // if (truckData.truckOwner || truckData.ownerLogo) {
+        //   throw new ForbiddenException("You cannot change truck owner details");
+        // }
+        // if (truckData.ownerId) {
+        //   throw new ForbiddenException("You cannot change truck owner ID");
+        // }
+
+        // For non-admin updates, maintain existing profile information
         truckData.profileId = existingTruck.profileId;
         truckData.profileType = existingTruck.profileType;
-        // For tanker, require loadStatus and productId
-        if (truckData.truckType === 'tanker') {
-          if (!truckData.loadStatus) throw new BadRequestException("loadStatus is required for tanker truck");
-          if (!truckData.productId) throw new BadRequestException("productId is required for tanker truck");
-        }
       }
 
-      // Validate depot hub and product (if provided)
+      // Validate depot hub and product (for all users)
       if (truckData.depotHubId) {
         const depotHub = await this.depotHubRepository.findOne(truckData.depotHubId);
         if (!depotHub) throw new BadRequestException("Depot Hub ID is invalid");
         truckData.depotHubId = depotHub._id;
       }
+
       if (truckData.productId) {
         const product = await this.productRepository.findOne(truckData.productId);
         if (!product) throw new BadRequestException("Product ID is invalid");
         truckData.productId = product._id;
       }
+
       return await this.truckRepository.update(truckId, truckData);
+
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof ForbiddenException || error instanceof NotFoundException) {
         throw error;
       }
+      // Handle other known errors
       if (error?.message) {
         throw new BadRequestException(error.message);
       }
+      // Fallback to generic error
       throw new BadRequestException('An unexpected error occurred while updating truck data.');
     }
   }

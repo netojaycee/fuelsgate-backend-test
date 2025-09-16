@@ -43,6 +43,7 @@ export class DepotHubRepository {
 
   async update(depotHubId: string, depotHubData: DepotHubDto) {
     try {
+      console.log(depotHubId, depotHubData)
       const updatedDepotHub = await this.depotHubModel.findByIdAndUpdate(
         depotHubId,
         depotHubData,

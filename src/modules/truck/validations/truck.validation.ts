@@ -3,7 +3,7 @@ import * as yup from 'yup';
 export const truckSchema = yup.object({
   truckType: yup
     .string()
-    .oneOf(['flatbed', 'tanker', 'stepdeck', 'dropdeck'], 'Truck type must be one of: flatbed, tanker, stepdeck, dropdeck')
+    .oneOf(['flatbed', 'tanker', 'sidewall', 'lowbed'], 'Truck type must be one of: flatbed, tanker, sidewall, lowbed')
     .required('Truck type is required'),
   truckFuelType: yup
     .string()
@@ -18,18 +18,11 @@ export const truckSchema = yup.object({
     .required('Truck number is required'),
   capacity: yup
     .number()
-    .when('truckType', {
-      is: (val: string) => val === 'tanker',
-      then: schema => schema.required('Truck capacity is required'),
-      otherwise: schema => schema.optional(),
-    }),
+    .required('Truck capacity is required'),
   depotHubId: yup
     .string()
-    .when('truckType', {
-      is: (val: string) => val === 'tanker',
-      then: schema => schema.required('Depot Hub is required'),
-      otherwise: schema => schema.optional(),
-    }),
+    .required('Depot Hub ID is required'),
+
   productId: yup
     .string()
     .when('truckType', {
@@ -39,38 +32,11 @@ export const truckSchema = yup.object({
     }),
   depot: yup
     .string()
-    .when('truckType', {
-      is: (val: string) => val === 'tanker',
-      then: schema => schema.required('Depot is required'),
-      otherwise: schema => schema.optional(),
-    }),
+    .required('Depot is required'),
   ownerId: yup.string().optional(),
   truckOwner: yup.string().optional(),
   ownerLogo: yup.string().optional(),
-  currentState: yup
-    .string()
-    .when('truckType', {
-      is: (val: string) => val !== 'tanker',
-      then: schema => schema.required('Select truck current state location is required'),
-      otherwise: schema => schema.optional(),
-    }),
-  currentCity: yup
-    .string()
-    .when('truckType', {
-      is: (val: string) => val !== 'tanker',
-      then: schema => schema.required('Select truck current city location is required'),
-      otherwise: schema => schema.optional(),
-    }),
-  // Flatbed / metadata optional fields
-  deckLengthFt: yup.string().optional(),
-  deckWidthFt: yup.string().optional(),
-  maxPayloadKg: yup.string().optional(),
-  notes: yup.string().optional(),
-  country: yup.string().optional(),
-  address: yup.string().optional(),
-  flatbedSubtype: yup.string().optional(),
-  equipment: yup.array().of(yup.string()).optional(),
-  preferredCargoTypes: yup.array().of(yup.string()).optional(),
+
 });
 
 export const truckStatusSchema = yup.object({

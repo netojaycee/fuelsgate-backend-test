@@ -1,4 +1,14 @@
+
+
 import { CalculateFareDto } from './../dto/calculate-fare.dto';
+
+// DTO for updating a distance
+export class UpdateDistanceDto {
+  state?: string;
+  lga?: string;
+  loadPoint?: string;
+  distanceKM?: number;
+}
 import {
   Controller,
   Post,
@@ -15,10 +25,30 @@ import { BulkUploadDistanceDto, CreateLoadPointDto } from '../dto/calculate-fare
 import { CreateTransportConfigDto, UpdateTransportConfigDto } from '../dto/transport-config.dto';
 import { Public } from 'src/shared/decorators/public.route.decorator';
 
+
 @Public()
 @Controller('transport-fare')
 export class TransportFareController {
   constructor(private readonly transportFareService: TransportFareService) {}
+
+  @Put('admin/distances/:id')
+  async editDistance(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateDistanceDto,
+    @Request() req,
+    @Response() res,
+  ) {
+    // const { user } = req;
+
+    // console.log(updateDto, "updateDto", id)
+    const updated = await this.transportFareService.editDistance(id, updateDto);
+    return res.status(200).json({
+      message: 'Distance updated successfully',
+      data: updated,
+      statusCode: 200,
+    });
+  }
+
 
   @Post('calculate')
   async calculateFare(

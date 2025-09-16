@@ -8,6 +8,9 @@ export class DepotHub {
   @Prop({ required: true, unique: true })
   name: string;
 
+  @Prop({ required: true, enum: ['tanker', 'others'], default: 'tanker' })
+  type: string;
+
   @Prop({ required: true })
   depots: string[];
 }

@@ -10,6 +10,7 @@ import { DatabaseDistanceService } from './database-distance.service';
 import { FareCalculationResult, ConfigParameters } from '../interfaces/distance-service.interface';
 import { Truck } from 'src/modules/truck/entities/truck.entity';
 
+
 @Injectable()
 export class TransportFareService {
   constructor(
@@ -116,7 +117,7 @@ export class TransportFareService {
   const configParams = await this.getConfigParameters();
 
    if (truckType !== 'tanker') {
-    truckCapacity = Number(truckCapacity) * 1000;
+    truckCapacity = Number(truckCapacity);
   }
 
   // Determine fuel consumption rates
@@ -420,4 +421,24 @@ export class TransportFareService {
   //     { upsert: true, new: true }
   //   );
   // }
+
+    async editDistance(id: string, updateDto: { state?: string; lga?: string; loadPoint?: string; distanceKM?: number }): Promise<LocationDistance> {
+    // Clean and normalize the data
+    const updateData: any = {};
+    if (updateDto.state) updateData.state = updateDto.state.trim();
+    if (updateDto.lga) updateData.lga = updateDto.lga.trim();
+    if (updateDto.loadPoint) updateData.loadPoint = updateDto.loadPoint.trim();
+    if (updateDto.distanceKM !== undefined) updateData.distanceKM = Number(updateDto.distanceKM);
+
+    const updated = await this.locationDistanceModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+    if (!updated) {
+      throw new NotFoundException(`Distance record with ID ${id} not found`);
+    }
+    return updated;
+  }
+
 }
