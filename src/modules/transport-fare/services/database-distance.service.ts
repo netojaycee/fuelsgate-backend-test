@@ -11,19 +11,25 @@ export class DatabaseDistanceService implements IDistanceService {
     private readonly locationDistanceModel: Model<LocationDistance>,
   ) {}
 
-  async getDistance(pickupLocation: string, loadPoint: string): Promise<number> {
-    // Parse pickup location (assuming format: "State, LGA")
-    const [state, lga] = pickupLocation.split(',').map(s => s.trim());
-    
+  async getDistance(origin: string, loadPoint: string, destination?: string): Promise<number> {
+    // Parse origin (assuming format: "State, LGA")
+    const [state, lga] = origin.split(',').map(s => s.trim());
+
     const distanceRecord = await this.locationDistanceModel.findOne({
       state: { $regex: new RegExp(`^${state}$`, 'i') },
       lga: { $regex: new RegExp(`^${lga}$`, 'i') },
-      loadPoint: { $regex: new RegExp(`^${loadPoint}$`, 'i') },
+      loadPoint: loadPoint ? { $regex: new RegExp(`^${loadPoint}$`, 'i') } : undefined,
     });
 
     if (!distanceRecord) {
+      let displayLoadPoint = loadPoint;
+      if (destination === 'lekki_deep_sea') {
+        displayLoadPoint = 'Lekki Deep Sea Port';
+      } else if (destination === 'tin_can_island') {
+        displayLoadPoint = 'Tin Can Island Port';
+      }
       throw new NotFoundException(
-        `Distance not found for route: ${state}, ${lga} to ${loadPoint}`
+        `Distance not found for route: ${state}, ${lga} to ${displayLoadPoint ?? destination}`
       );
     }
 

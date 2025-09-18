@@ -25,6 +25,7 @@ import { OrderGateway } from '../gateway/order.gateway';
 import { NegotiationService } from 'src/modules/negotiation/services/negotiation.service';
 import { OrderDto, OrderQueryDto, OrderUpdateDto } from '../dto/order.dto';
 import { NegotiationDocument } from 'src/modules/negotiation/entities/negotiation.entity';
+import { TicketRepository } from 'src/modules/ticket/repositories/ticket.repository';
 
 @Injectable()
 export class OrderService {
@@ -36,6 +37,7 @@ export class OrderService {
     private readonly negotiationService: NegotiationService,
     private readonly platformConfigService: PlatformConfigService,
     private truckRepository: TruckRepository,
+    private ticketRepository: TicketRepository,
     private buyerRepository: BuyerRepository,
     private sellerRepository: SellerRepository,
     private transporterRepository: TransporterRepository,
@@ -325,30 +327,56 @@ export class OrderService {
           order.rfqStatus = 'accepted';
           await this.truckRepository.update(order.truckId, { status: 'locked' });
           await this.notifyOtherBuyers(order, user);
-          const serviceFees = await this.platformConfigService.getServiceFees();
-          const transporterFeeRate = Number(serviceFees.transporterServiceFee);
-          const buyerFeeRate = Number(serviceFees.traderServiceFee);
-          const transportFee = Number(order.price);
+            const serviceFees = await this.platformConfigService.getServiceFees();
+            const truck = await this.truckRepository.findOne(order.truckId);
+            if (!truck) {
+            throw new BadRequestException('Truck not found for ticket creation');
+            }
 
+            console.log(serviceFees, "serviceFees")
+            console.log(truck, "truck")
+            const transporterFeeRate = Number(serviceFees.transporterServiceFee);
+            const buyerFeeRate = Number(serviceFees.traderServiceFee);
+            const transporterFeeRateLoaded = Number(serviceFees.transporterServiceFeeLoaded);
+            const buyerFeeRateLoaded = Number(serviceFees.traderServiceFeeLoaded);
+            const transportFee = Number(order.price);
 
-          if (
-            isNaN(transporterFeeRate) ||
-            isNaN(buyerFeeRate) ||
-            isNaN(transportFee)
-          ) {
-            throw new BadRequestException('Invalid fee rates or offer price for ticket creation');
-          }
+            if (isNaN(transportFee)) {
+            throw new BadRequestException('Invalid offer price for ticket creation');
+            }
 
-          // Ensure only one ticket per order
-          // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
-          // if (!existingTicket) {
-          await this.ticketService.create({
-            orderId: order._id.toString(),
-            transportFee,
-            transporterServiceFee: Number(((transporterFeeRate / 100) * transportFee).toFixed(2)),
-            buyerServiceFee: Number(((buyerFeeRate / 100) * transportFee).toFixed(2)),
-          });
-          // }
+            let transporterServiceFee = 0;
+            let buyerServiceFee = 0;
+
+            if (truck.truckType === 'tanker') {
+            if (truck.loadStatus === 'unloaded') {
+              transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+              buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+            } else if (truck.loadStatus === 'loaded') {
+              transporterServiceFee = isNaN(transporterFeeRateLoaded) ? 0 : Number(((transporterFeeRateLoaded / 100) * transportFee).toFixed(2));
+              buyerServiceFee = isNaN(buyerFeeRateLoaded) ? 0 : Number(((buyerFeeRateLoaded / 100) * transportFee).toFixed(2));
+            } else {
+              transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+              buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+            }
+            } else {
+            transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+            buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+            }
+
+            // If any fee is zero, just return 0 for that role (already handled above)
+
+            // Ensure only one ticket per order
+            // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
+            const existingTicket = await this.ticketRepository.findByOrderId(order._id.toString());
+            if (!existingTicket) {
+            await this.ticketService.create({
+              orderId: order._id.toString(),
+              transportFee,
+              transporterServiceFee,
+              buyerServiceFee,
+            });
+            }
         }
         break;
 
@@ -757,15 +785,15 @@ export class OrderService {
       }
 
       // Ensure only one ticket per order
-      // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
-      // if (!existingTicket) {
+      const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
+      if (!existingTicket) {
       await this.ticketService.create({
         orderId: order._id.toString(),
         transportFee,
         transporterServiceFee: Number(((transporterFeeRate / 100) * transportFee).toFixed(2)),
         buyerServiceFee: Number(((buyerFeeRate / 100) * transportFee).toFixed(2)),
       });
-      // }
+      }
     }
     await order.save();
     return order;
@@ -829,31 +857,57 @@ export class OrderService {
     }
     if (order.type === 'truck') {
       // order.rfqStatus = 'accepted';
+      // Lock the truck and notify other buyers
+      await this.truckRepository.update(order.truckId, { status: 'locked' });
       await this.notifyOtherBuyers(order, user);
+
+      // Calculate service fees based on truck type and load status
       const serviceFees = await this.platformConfigService.getServiceFees();
+      const truck = await this.truckRepository.findOne(order.truckId);
+      if (!truck) {
+        throw new BadRequestException('Truck not found for ticket creation');
+      }
+
       const transporterFeeRate = Number(serviceFees.transporterServiceFee);
       const buyerFeeRate = Number(serviceFees.traderServiceFee);
+      const transporterFeeRateLoaded = Number(serviceFees.transporterServiceFeeLoaded);
+      const buyerFeeRateLoaded = Number(serviceFees.traderServiceFeeLoaded);
       const transportFee = Number(offerPrice);
+      console.log(transportFee, "Ffffff")
 
+      if (isNaN(transportFee)) {
+        throw new BadRequestException('Invalid offer price for ticket creation');
+      }
 
-      if (
-        isNaN(transporterFeeRate) ||
-        isNaN(buyerFeeRate) ||
-        isNaN(transportFee)
-      ) {
-        throw new BadRequestException('Invalid fee rates or offer price for ticket creation');
+      let transporterServiceFee = 0;
+      let buyerServiceFee = 0;
+
+      if (truck.truckType === 'tanker') {
+        if (truck.loadStatus === 'unloaded') {
+          transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+          buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+        } else if (truck.loadStatus === 'loaded') {
+          transporterServiceFee = isNaN(transporterFeeRateLoaded) ? 0 : Number(((transporterFeeRateLoaded / 100) * transportFee).toFixed(2));
+          buyerServiceFee = isNaN(buyerFeeRateLoaded) ? 0 : Number(((buyerFeeRateLoaded / 100) * transportFee).toFixed(2));
+        } else {
+          transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+          buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+        }
+      } else {
+        transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+        buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
       }
 
       // Ensure only one ticket per order
-      // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
-      // if (!existingTicket) {
-      await this.ticketService.create({
-        orderId: order._id.toString(),
-        transportFee,
-        transporterServiceFee: Number(((transporterFeeRate / 100) * transportFee).toFixed(2)),
-        buyerServiceFee: Number(((buyerFeeRate / 100) * transportFee).toFixed(2)),
-      });
-      // }
+      const existingTicket = await this.ticketRepository.findByOrderId(order._id.toString());
+      if (!existingTicket) {
+        await this.ticketService.create({
+          orderId: order._id.toString(),
+          transportFee,
+          transporterServiceFee,
+          buyerServiceFee,
+        });
+      }
     }
     await order.save();
 

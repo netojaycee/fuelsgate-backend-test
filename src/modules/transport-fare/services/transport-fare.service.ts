@@ -111,7 +111,12 @@ export class TransportFareService {
   // console.log(calculateFareDto, "calculateFareDto")
 
   const deliveryLocation = `${deliveryState}, ${deliveryLGA}`;
-  const distance = await this.databaseDistanceService.getDistance(deliveryLocation, loadPoint);
+  let actualLoadPoint = loadPoint;
+  if (truckType !== 'tanker') {
+  if (loadPoint === 'lekki_deep_sea') actualLoadPoint = 'Dangote Oil Refinery';
+  if (loadPoint === 'tin_can_island') actualLoadPoint = 'Pinnacle Oil & Gas FZE';
+  }
+  const distance = await this.databaseDistanceService.getDistance(deliveryLocation, actualLoadPoint, loadPoint);
 
   // Get config parameters
   const configParams = await this.getConfigParameters();
@@ -440,5 +445,25 @@ export class TransportFareService {
     }
     return updated;
   }
+
+    async updateLoadPoint(id: string, updateDto: CreateLoadPointDto): Promise<LoadPoint> {
+    // Clean and normalize the data
+    const updateData: any = {};
+    if (updateDto.name) updateData.name = updateDto.name.trim();
+    if (updateDto.displayName) updateData.displayName = updateDto.displayName.trim();
+    if (updateDto.state) updateData.state = updateDto.state.trim();
+    if (updateDto.lga) updateData.lga = updateDto.lga.trim();
+
+    const updated = await this.loadPointModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+    if (!updated) {
+      throw new NotFoundException(`Load point with ID ${id} not found`);
+    }
+    return updated;
+  }
+
 
 }

@@ -45,4 +45,6 @@ export class PlatformConfigQueryDto {
 export interface ServiceFeeConfig {
     transporterServiceFee: number;
     traderServiceFee: number;
+    traderServiceFeeLoaded: number;
+    transporterServiceFeeLoaded: number;
 }

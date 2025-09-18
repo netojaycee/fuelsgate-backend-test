@@ -120,7 +120,10 @@ export class OrderRepository {
                 })
                 .populate({
                     path: 'truckId',
-                    populate: { path: 'depotHubId' }
+                    populate: [
+                        { path: 'depotHubId' },
+                        { path: 'productId' }
+                    ]
                 })
                 .exec();
 

@@ -117,11 +117,11 @@ export class PlatformConfigController {
     @UseGuards(JwtAuthGuard)
     @AuditLog({ action: 'UPDATE_SERVICE_FEES', module: 'PLATFORM_CONFIG' })
     async updateServiceFees(
-        @Body() body: { transporterServiceFee: number, traderServiceFee: number },
+        @Body() body: { transporterServiceFee: number, traderServiceFee: number, traderServiceFeeLoaded: number, transporterServiceFeeLoaded: number },
         @Response() res,
     ) {
-        const { transporterServiceFee, traderServiceFee } = body;
-        const data = await this.platformConfigService.updateServiceFees(transporterServiceFee, traderServiceFee);
+        const { transporterServiceFee, traderServiceFee, traderServiceFeeLoaded, transporterServiceFeeLoaded } = body;
+        const data = await this.platformConfigService.updateServiceFees(transporterServiceFee, traderServiceFee, traderServiceFeeLoaded, transporterServiceFeeLoaded);
         return res.status(200).json({
             message: 'Service fees updated successfully',
             data,

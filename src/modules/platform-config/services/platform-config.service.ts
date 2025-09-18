@@ -21,7 +21,9 @@ export class PlatformConfigService {
     // Config keys
     private readonly TRANSPORTER_FEE_KEY = 'transporter_service_fee_percentage';
     private readonly TRADER_FEE_KEY = 'trader_service_fee_percentage';
-
+    private readonly TRADER_FEE_KEY_LOADED = 'trader_service_fee_percentage_loaded';
+    private readonly TRANSPORTER_FEE_KEY_LOADED = 'transporter_service_fee_percentage_loaded';
+    
     constructor(private platformConfigRepository: PlatformConfigRepository) {
         // Initialize default values if they don't exist
         // this.initializeDefaultConfigs();
@@ -105,14 +107,19 @@ export class PlatformConfigService {
 
     async getServiceFees(): Promise<ServiceFeeConfig> {
         try {
-            const [transporterFee, traderFee] = await Promise.all([
+            const [transporterFee, traderFee, traderFeeLoaded, transporterFeeLoaded] = await Promise.all([
                 this.platformConfigRepository.findOne(this.TRANSPORTER_FEE_KEY),
-                this.platformConfigRepository.findOne(this.TRADER_FEE_KEY)
+                this.platformConfigRepository.findOne(this.TRADER_FEE_KEY),
+                this.platformConfigRepository.findOne(this.TRADER_FEE_KEY_LOADED),
+                this.platformConfigRepository.findOne(this.TRANSPORTER_FEE_KEY_LOADED)
             ]);
 
             return {
                 transporterServiceFee: transporterFee?.value,
-                traderServiceFee: traderFee?.value
+                traderServiceFee: traderFee?.value,
+                traderServiceFeeLoaded: traderFeeLoaded?.value,
+                transporterServiceFeeLoaded: transporterFeeLoaded?.value
+
             };
         } catch (error) {
             console.error('Error fetching service fees:', error);
@@ -124,8 +131,8 @@ export class PlatformConfigService {
         }
     }
 
-    async updateServiceFees(transporterFee: number, traderFee: number): Promise<ServiceFeeConfig> {
-        if (transporterFee < 0 || transporterFee > 100 || traderFee < 0 || traderFee > 100) {
+    async updateServiceFees(transporterFee: number, traderFee: number, traderFeeLoaded: number, transporterFeeLoaded: number): Promise<ServiceFeeConfig> {
+        if (transporterFee < 0 || transporterFee > 100 || traderFee < 0 || traderFee > 100 || traderFeeLoaded < 0 || traderFeeLoaded > 100 || transporterFeeLoaded < 0 || transporterFeeLoaded > 100) {
             throw new BadRequestException('Fee percentages must be between 0 and 100');
         }
 
@@ -137,12 +144,22 @@ export class PlatformConfigService {
             this.platformConfigRepository.update(this.TRADER_FEE_KEY, {
                 value: traderFee,
                 description: 'Service fee percentage charged to traders (buyers/sellers)'
+            }),
+            this.platformConfigRepository.update(this.TRADER_FEE_KEY_LOADED, {
+                value: traderFeeLoaded,
+                description: 'Service fee percentage charged to traders for loaded orders'
+            }),
+            this.platformConfigRepository.update(this.TRANSPORTER_FEE_KEY, {
+                value: transporterFeeLoaded,
+                description: 'Service fee percentage charged to transporters for loaded orders'
             })
         ]);
 
         return {
             transporterServiceFee: transporterFee,
-            traderServiceFee: traderFee
+            traderServiceFee: traderFee,
+            traderServiceFeeLoaded: traderFeeLoaded,
+            transporterServiceFeeLoaded: transporterFeeLoaded
         };
     }
 }

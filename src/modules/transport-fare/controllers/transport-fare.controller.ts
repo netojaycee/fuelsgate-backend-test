@@ -1,5 +1,3 @@
-
-
 import { CalculateFareDto } from './../dto/calculate-fare.dto';
 
 // DTO for updating a distance
@@ -200,6 +198,22 @@ export class TransportFareController {
     });
   }
 
+  @Put('admin/load-points/:id')
+  async updateLoadPoint(
+    @Param('id') id: string,
+    @Body() updateDto: CreateLoadPointDto,
+    @Request() req,
+    @Response() res,
+  ) {
+    // const { user } = req;
+    const updated = await this.transportFareService.updateLoadPoint(id, updateDto);
+    return res.status(200).json({
+      message: 'Load point updated successfully',
+      data: updated,
+      statusCode: 200,
+    });
+  }
+  
   @Delete('admin/load-points/:id')
   async deleteLoadPoint(
     @Param('id') id: string,
