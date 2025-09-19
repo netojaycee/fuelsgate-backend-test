@@ -65,6 +65,22 @@ export class Order {
 
     @Prop({ default: null })
     expiresIn?: Date;
+
+    @Prop({ type: [String], default: undefined })
+specialHandling?: string[];
+
+@Prop({ default: null })
+notes?: string;
+
+@Prop({ default: null })
+cargoType?: string;
+
+@Prop({ default: null })
+cargoCategory?: string;
+
+@Prop({ default: null })
+cargoWeight?: string;
+
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

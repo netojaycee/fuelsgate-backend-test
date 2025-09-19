@@ -69,6 +69,11 @@ export const OrderDtoSchema = yup.object({
             then: (schema) => schema.required('City is required for truck orders'),
             otherwise: (schema) => schema.nullable(),
         }),
+    specialHandling: yup.array().of(yup.string()).optional(),
+    notes: yup.string().optional(),
+    cargoType: yup.string().optional(),
+    cargoCategory: yup.string().optional(),
+    cargoWeight: yup.string().optional(),
 });
 
 

@@ -15,6 +15,12 @@ export class OrderDto {
     arrivalTime?: Date;
     status?: 'pending' | 'in-progress' | 'completed' | 'cancelled';
     rfqStatus?: 'pending' | 'sent' | 'accepted' | 'rejected';
+    specialHandling: string[];
+    notes: string;
+    cargoType: string;
+    cargoCategory: string;
+    cargoWeight: string;
+    
 }
 
 export class OrderQueryDto {
