@@ -12,6 +12,7 @@ export interface IUser {
   providerId?: string;
   provider?: string;
   averageRating?: number;
+  canLoad?: boolean;
 }
 
 export interface IUserWithRole extends IUser {

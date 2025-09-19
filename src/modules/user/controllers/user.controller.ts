@@ -9,6 +9,7 @@ import {
   Request,
   Response,
   Query,
+  Put,
 } from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { IUser, IUserWithRole, UpdatePasswordDto, UserQueryDto, ToggleStatusDto } from '../dto/user.dto';
@@ -199,6 +200,17 @@ export class UserController {
         statusCode: 400,
       });
     }
+  }
+
+  @Put('toggle-can-load/:userId')
+  async toggleCanLoad(@Request() req, @Param('userId') userId: string, @Response() res) {
+    const { user } = req;
+    const data = await this.userService.toggleCanLoad(user, userId);
+    return res.status(200).json({
+      message: 'User canLoad toggled successfully',
+      data,
+      statusCode: 200,
+    });
   }
 
   // Add this to your user.controller.ts for testing

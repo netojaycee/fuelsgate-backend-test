@@ -117,6 +117,8 @@ export class AuthenticationService {
     const user = await this.userService.findUserWithRole(_user._id);
     let profile: unknown;
 
+    console.log(user, "user")
+
     switch (user.role) {
       case 'buyer':
         profile = await this.buyerRepository.findOneQuery({ userId: user._id });

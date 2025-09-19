@@ -16,8 +16,8 @@ async function updateLoadPoints() {
     await mongoose.connect(DB_URL);
     const LocationDistance = mongoose.model('LocationDistance', LocationDistanceSchema);
     const result = await LocationDistance.updateMany(
-      { loadPoint: { $regex: /^ibeju_dangote$/i } },
-      { $set: { loadPoint: 'Dangote Oil Refinery' } }
+      { loadPoint: { $regex: /^Dangote Oil Refinery$/i } },
+      { $set: { loadPoint: 'dangote' } }
     );
     console.log(`Updated ${result.modifiedCount} records.`);
     process.exit(0);
@@ -31,3 +31,4 @@ updateLoadPoints();
 
 
 //   "type": "module",
+// node seed-update-loadpoint.js

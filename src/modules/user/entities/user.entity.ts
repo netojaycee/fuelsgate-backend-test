@@ -31,6 +31,10 @@ export class User implements IUser {
 
   @Prop({ default: 0, min: 0, max: 5 })
   averageRating: number;
+
+    // a boolean field default false for transporters
+  @Prop({ required: true, default: false })
+  canLoad: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

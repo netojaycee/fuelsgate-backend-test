@@ -111,18 +111,102 @@ export class TransportFareService {
   // console.log(calculateFareDto, "calculateFareDto")
 
   const deliveryLocation = `${deliveryState}, ${deliveryLGA}`;
-  let actualLoadPoint = loadPoint;
-  if (truckType !== 'tanker') {
-  if (loadPoint === 'lekki_deep_sea') actualLoadPoint = 'Dangote Oil Refinery';
-  if (loadPoint === 'tin_can_island') actualLoadPoint = 'Pinnacle Oil & Gas FZE';
+// Mapping object for load points (terminals) to their parent locations/data keys.
+// Based on the provided groups and DB entries, only exact or close matches are mapped.
+// Unmapped entries (e.g., "Ardova Petroleum", "Conoil", "Rainoil") will fall back to the original loadPoint.
+// For standalone groups (pinnacle, dangote), they map to their full DB names.
+// For grouped locations (coconut, satellite, dockyard), children map to the location name (assumed to be the data key).
+
+const loadPointMapping = {
+  // Coconut group children -> 'coconut'
+  'Integrated Oil & Gas': 'coconut',
+  'African Terminals': 'coconut',
+  'Bono Energy Storage Terminal': 'coconut', // Assumed match for "Best terminal *"
+  'Gulf Treasures': 'coconut',
+  'Bovas & Company': 'coconut',
+  'Quest ': 'coconut', // Matches "Quest Oil"
+  'Eterna': 'coconut',
+  'Duport Energy': 'coconut',
+  'SPOG Petrochemical': 'coconut', // Matches "spog petrochemical"
+  'Ibafon Oil': 'coconut', // Matches "Ibafon"
+  'Asharami Synergy': 'coconut', // Matches "Asharami"
+  'IBETO': 'coconut', // Matches "Ibeto"
+  'Shema Petroleum': 'coconut', // Matches "Shema"
+  'AIPEC': 'coconut', // Matches "Aipec"
+  'Coolspring Energy': 'coconut',
+  'Rahamaniyya Oil & Gas': 'coconut', // Matches "Ramaniyah"
+  'Obat Oil & Petroleum': 'coconut', // Matches "Obat"
+  'Dee Jones Petroleum & Gas': 'coconut', // Matches "Dejones"
+  'Fatgbems Petroleum Company': 'coconut', // Matches "Fatgbems"
+  'Swift Oil': 'coconut', // Matches "Swift"
+  'Techno Oil': 'coconut', // Matches "Techno"
+  'Index Petrolube Africa': 'coconut', // Matches "Index"
+  'Chisco Energy Nigeria': 'coconut', // Matches "Chisco"
+  'IBRU Peddler Park Coconut': 'coconut', // Park associated with Coconut
+
+  // Satellite group children -> 'satellite'
+  'WOSBAB Energy Solutions Nigeria': 'satellite', // Matches "Wosbab"
+  'Emadeb Energy Services': 'satellite', // Matches "Emadeb"
+  'Mao Petroleum': 'satellite', // Matches "MAO"
+  'A.A.Rano Nigeria': 'satellite', // Matches "AA Rano"
+  'First Royal Oil': 'satellite', // Matches "Frst royal"
+  'Chipet International ': 'satellite', // Matches "Chipet"
+  'Stallionaire Nigeria': 'satellite', // Matches "Stallionare"
+  'Menj Oil': 'satellite', // Matches "Menj"
+  'J.Gold Petroleum & Global Investment': 'satellite', // Matches "J.Gold"
+  'TMDK Oil Traders': 'satellite', // Matches "TMDK"
+  'ShellPLux Nigeria': 'satellite', // Matches "Shellplus"
+
+  // Dockyard group children -> 'dockyard'
+  'MRS Oil & Gas': 'dockyard', // Matches "MRS"
+  'Aiteo': 'dockyard',
+  'A - Z Petroleum Products': 'dockyard', // Matches "A-Z"
+  'Eurafric Coastal Services': 'dockyard', // Matches "Eurafic"
+  'NIPCO': 'dockyard', // Matches "Nipco"
+  'Total Terminal I': 'dockyard', // Matches one of the "Total"
+  'NNPC Terminal I(Oando Terminal I)': 'dockyard', // Matches "Oando/OVH"
+  'Total / Oando JV': 'dockyard', // Matches "Oando/OVH" or "Total"
+  '11 PLC(Formerly Mobil Oil Nigeria Plc)': 'dockyard', // Matches "Mobil"
+  'Hensmor': 'dockyard', // Assumed match for "Esmor"
+  'Energy Network IBG': 'dockyard', // Assumed match for "Energy"
+  'Heyden Petroleum Company': 'dockyard', // Matches "Hyden"
+  'Koro Park Dockyard': 'dockyard', // Park associated with Dockyard
+  // Additional DB entries that appear to fit dockyard based on context (e.g., common terminals)
+  // These were not explicitly listed in groups but match typical dockyard operators
+  'Ardova Petroleum': 'dockyard',
+  'Conoil': 'dockyard',
+  'One Terminals': 'dockyard',
+  // Standalone: map to themselves (full DB names)
+  'Pinnacle Oil & Gas FZE': 'pinnacle',
+  'Dangote Oil Refinery': 'dangote'
+};
+
+// Extended use case logic
+let actualLoadPoint = loadPoint;
+
+// Handle non-tanker trucks (special mappings for lekki_deep_sea and tin_can_island)
+if (truckType !== 'tanker') {
+  if (loadPoint === 'lekki_deep_sea') {
+    actualLoadPoint = 'dangote';
+  } else if (loadPoint === 'tin_can_island') {
+    actualLoadPoint = 'pinnacle';
   }
+  // For other non-tanker loadPoints, you may want to add validation or default here
+} else {
+  // For tanker trucks, map to parent/group data key if available, else keep original
+  // This assumes received loadPoint matches a DB entry exactly
+  actualLoadPoint = loadPointMapping[loadPoint] || loadPoint;
+  // Optional: Validate that loadPoint is a known tanker entry (e.g., check if in Object.keys(loadPointMapping) excluding standalones if needed)
+}
+
+// Now use actualLoadPoint to fetch/use the corresponding parent data
   const distance = await this.databaseDistanceService.getDistance(deliveryLocation, actualLoadPoint, loadPoint);
 
   // Get config parameters
   const configParams = await this.getConfigParameters();
 
    if (truckType !== 'tanker') {
-    truckCapacity = Number(truckCapacity);
+    truckCapacity = Number(truckCapacity) * 1000;
   }
 
   // Determine fuel consumption rates

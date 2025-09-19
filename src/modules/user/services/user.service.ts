@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnprocessableEntityException,
@@ -395,6 +396,7 @@ export class UserService {
       email: user.email,
       status: user.status,
       lastSeen: user.lastSeen,
+      canLoad: user.canLoad,
       role: role.name as RoleType,
     };
 
@@ -449,5 +451,14 @@ export class UserService {
     });
 
     return users;
+  }
+  async toggleCanLoad(admin: IJwtPayload, userId: string) {
+    if (admin.role !== 'admin') {
+      throw new ForbiddenException('Unauthorized Access');
+    }
+    const user = await this.userRepository.findOne(userId);
+    if (!user) throw new BadRequestException('User not found');
+  const updatedUser = await this.userRepository.update(userId, { canLoad: !(user as any).canLoad } as any);
+  return updatedUser;
   }
 }
