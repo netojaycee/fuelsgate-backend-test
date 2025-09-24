@@ -12,6 +12,7 @@ export class CreateRatingDto {
     review?: string;
 
     @IsString()
+    @IsOptional()
     orderType?: 'truck' | 'product';
 
     @IsOptional()
@@ -48,7 +49,7 @@ export interface IRatingResponse {
     ratedUserId: string;
     rating: number;
     review: string;
-    orderType: 'truck' | 'product';
+    orderType?: 'truck' | 'product';
     orderId?: string;
     createdAt: Date;
     updatedAt: Date;

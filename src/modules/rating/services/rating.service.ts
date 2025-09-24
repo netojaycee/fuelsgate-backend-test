@@ -74,7 +74,7 @@ export class RatingService {
         } catch (error) {
             // Handle duplicate key error
             if (error.code === 11000) {
-                throw new BadRequestException('You have already rated for this order');
+                throw new BadRequestException('You have already rated this order');
             }
             throw error;
         }
@@ -233,65 +233,76 @@ export class RatingService {
         return { message: 'Rating deleted successfully' };
     }
 
-    private async getRatedUserFromOrder(
-        raterId: string,
-        orderId: string,
-    ): Promise<any> {
+   private async getRatedUserFromOrder(
+    raterId: string,
+    orderId: string,
+): Promise<any> {
 
-        const order = await this.orderRepository.findOrderById(orderId);
-        if (!order) {
-            throw new NotFoundException('Order not found');
-        }
-
-        // Check if the order is completed
-        if (order.status !== 'completed') {
-            throw new BadRequestException('You can only rate after the order is completed');
-        }
-
-        // Extract user IDs from the populated order data
-        let buyerUserId: string;
-        let sellerUserId: string;
-
-        // Handle case where data is already populated
-        if (typeof order.buyerId === 'object' && (order.buyerId as any).userId) {
-            // buyerId is populated, check if userId is also populated
-            if (typeof (order.buyerId as any).userId === 'object') {
-                buyerUserId = (order.buyerId as any).userId._id.toString();
-            } else {
-                buyerUserId = (order.buyerId as any).userId.toString();
-            }
-        } else {
-            // buyerId is just an ObjectId, need to fetch buyer
-            const buyer = await this.buyerRepository.findOne(order.buyerId.toString());
-            if (!buyer) {
-                throw new NotFoundException('Buyer not found');
-            }
-            buyerUserId = buyer.userId.toString();
-        }
-
-        if (typeof order.sellerId === 'object' && (order.sellerId as any).userId) {
-            // sellerId is populated
-            sellerUserId = (order.sellerId as any).userId.toString();
-        } else {
-            // sellerId is just an ObjectId, need to fetch seller
-            const seller = await this.sellerRepository.findOne(order.sellerId.toString());
-            if (!seller) {
-                throw new NotFoundException('Seller not found');
-            }
-            sellerUserId = seller.userId.toString();
-        }
-
-        // Determine who should be rated based on who is rating
-        if (raterId === buyerUserId) {
-            // Buyer is rating the seller
-            return sellerUserId;
-        } else if (raterId === sellerUserId) {
-            // Seller is rating the buyer
-            return buyerUserId;
-        } else {
-            throw new ForbiddenException('You are not part of this order');
-        }
+    const order = await this.orderRepository.findOrderById(orderId);
+    if (!order) {
+        throw new NotFoundException('Order not found');
     }
+
+    // Check if the order is completed
+    if (order.status !== 'completed') {
+        throw new BadRequestException('You can only rate after the order is completed');
+    }
+
+    // Extract user IDs from the populated order data
+    let buyerUserId: string;
+    let profileUserId: string;
+
+    // Handle buyerId (same as before)
+    if (typeof order.buyerId === 'object' && (order.buyerId as any).userId) {
+        // buyerId is populated, check if userId is also populated
+        if (typeof (order.buyerId as any).userId === 'object') {
+            buyerUserId = (order.buyerId as any).userId._id.toString();
+        } else {
+            buyerUserId = (order.buyerId as any).userId.toString();
+        }
+    } else {
+        // buyerId is just an ObjectId, need to fetch buyer
+        const buyer = await this.buyerRepository.findOne(order.buyerId.toString());
+        if (!buyer) {
+            throw new NotFoundException('Buyer not found');
+        }
+        buyerUserId = buyer.userId.toString();
+    }
+
+    // Handle profileId based on profileType
+    if (typeof order.profileId === 'object' && (order.profileId as any).userId) {
+        // profileId is populated
+        if (typeof (order.profileId as any).userId === 'object') {
+            profileUserId = (order.profileId as any).userId._id.toString();
+        } else {
+            profileUserId = (order.profileId as any).userId.toString();
+        }
+    } else {
+        // profileId is just an ObjectId, need to fetch based on profileType
+        let profile;
+        if (order.profileType === 'transporter') {
+            profile = await this.transporterRepository.findOne(order.profileId.toString());
+        } else if (order.profileType === 'seller') {
+            profile = await this.sellerRepository.findOne(order.profileId.toString());
+        }
+        
+        if (!profile) {
+            throw new NotFoundException(`${order.profileType} not found`);
+        }
+        profileUserId = profile.userId.toString();
+    }
+
+    // Determine who should be rated based on who is rating
+    if (raterId === buyerUserId) {
+        // Buyer is rating the seller/transporter
+        return profileUserId;
+    } else if (raterId === profileUserId) {
+        // Seller/transporter is rating the buyer
+        return buyerUserId;
+    } else {
+        throw new ForbiddenException('You are not part of this order');
+    }
+}
 
     /**
      * Admin method to recalculate all user average ratings
