@@ -43,7 +43,7 @@ export class ResendService {
 
             // Send email via Resend
             const data = await this.resend.emails.send({
-                from: 'FuelsGate <noreply@fuelsgate.com>',
+                from: 'Fuelsgate <noreply@fuelsgate.com>',
                 to: [to],
                 subject,
                 html: emailHtml,

@@ -66,7 +66,7 @@ import { TransportFareModule } from './modules/transport-fare/transport-fare.mod
     //     logger: true, // Add this
     //   },
     //   defaults: {
-    //     from: 'FuelsGate <noreply@fuelsgate.com>',
+    //     from: 'Fuelsgate <noreply@fuelsgate.com>',
     //   },
     //   template: {
     //     dir: join(__dirname, 'templates'),

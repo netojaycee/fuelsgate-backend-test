@@ -46,12 +46,9 @@ export class OrderService {
     private orderRepository: OrderRepository,
     private orderGateway: OrderGateway,
     @Inject('SOCKET_SERVER') private readonly socketServer: Server,
-
-
-  ) { }
+  ) {}
 
   async createOrder(dto: OrderDto, user: IJwtPayload): Promise<OrderDocument> {
-
     console.log('Creating order:', dto, user);
     // Validate DTO
     try {
@@ -68,7 +65,6 @@ export class OrderService {
     const buyer = await this.buyerRepository.findOneQuery({ userId: user.id });
     if (!buyer) throw new BadRequestException('Buyer ID is invalid');
 
-
     // Check for existing order
     if (dto.type === 'truck') {
       const existing = await this.orderModel.findOne({
@@ -78,9 +74,11 @@ export class OrderService {
         status: { $nin: ['completed', 'cancelled'] },
       });
 
-      console.log(existing, "existing")
+      console.log(existing, 'existing');
       if (existing) {
-        throw new BadRequestException('An ongoing or pending RFQ already exists for this truck');
+        throw new BadRequestException(
+          'An ongoing or pending RFQ already exists for this truck',
+        );
       }
     } else if (dto.type === 'product') {
       const existing = await this.orderModel.findOne({
@@ -90,14 +88,16 @@ export class OrderService {
         status: { $ne: 'completed' },
       });
       if (existing) {
-        throw new BadRequestException('An ongoing or pending order already exists for this product');
+        throw new BadRequestException(
+          'An ongoing or pending order already exists for this product',
+        );
       }
     }
 
     // Generate tracking ID
-    const trackingId = generateOrderId(dto.type === 'truck' ? 'FG-TORD' : 'FG-ORD');
-
-
+    const trackingId = generateOrderId(
+      dto.type === 'truck' ? 'FG-TORD' : 'FG-ORD',
+    );
 
     // Fetch entities
     let entity: any;
@@ -114,7 +114,8 @@ export class OrderService {
           : await this.transporterRepository.findOne(entity.profileId);
     } else {
       entity = await this.productUploadRepository.findOne(dto.productUploadId);
-      if (!entity) throw new BadRequestException('Product Upload ID is invalid');
+      if (!entity)
+        throw new BadRequestException('Product Upload ID is invalid');
       profile = await this.sellerRepository.findOne(dto.profileId);
       profileType = 'seller';
     }
@@ -132,6 +133,8 @@ export class OrderService {
       profileType,
     });
 
+    const truck = await this.truckRepository.findOne(order.truckId);
+    const truckLoadStatus = truck?.loadStatus || 'unloaded';
     const [recipient, sender] = await Promise.all([
       this.userRepository.findOne(profile.userId),
       this.userRepository.findOne(buyer.userId),
@@ -143,10 +146,18 @@ export class OrderService {
     // Send email notification
     const recipientName = `${recipient.firstName} ${recipient.lastName}`;
     const senderName = `${sender.firstName} ${sender.lastName}`;
-    const subject = dto.type === 'truck' ? 'New Truck Order Alert!' : 'New Product Order Alert!';
+    const subject =
+      dto.type === 'truck' && truckLoadStatus === 'unloaded'
+        ? 'New Truck Order Alert!'
+        : dto.type === 'truck' && truckLoadStatus === 'loaded'
+          ? 'Volume Order Alert!'
+          : 'New Product Order Alert!';
 
     // Read and prepare email template
-    let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/new-order.html'), 'utf8');
+    let generalHtml = fs.readFileSync(
+      join(__dirname, '../../../templates/new-order.html'),
+      'utf8',
+    );
 
     // Prepare type-specific content
     const isTruck = dto.type === 'truck';
@@ -190,21 +201,45 @@ export class OrderService {
     }
 
     generalHtml = generalHtml
-      .replace(/{{OrderTitle}}/g, isTruck ? 'New Truck Request for Quotation (RFQ)' : 'New Product Order Request')
-      .replace(/{{OrderType}}/g, isTruck ? 'truck RFQ' : 'product order')
-      .replace(/{{OrderDetailsTitle}}/g, isTruck ? 'RFQ Details' : 'Order Details')
+      .replace(
+        /{{OrderTitle}}/g,
+        isTruck && truckLoadStatus === 'unloaded'
+          ? 'New Truck Request for Quotation (RFQ)'
+          : isTruck && truckLoadStatus === 'loaded'
+            ? 'New Volume Order Request for Quotation (RFQ)'
+            : 'New Product Order Request',
+      )
+      .replace(
+        /{{OrderType}}/g,
+        isTruck && truckLoadStatus === 'unloaded'
+          ? 'truck RFQ'
+          : isTruck && truckLoadStatus === 'loaded'
+            ? 'volume RFQ'
+            : 'product order',
+      )
+      .replace(
+        /{{OrderDetailsTitle}}/g,
+        isTruck ? 'RFQ Details' : 'Order Details',
+      )
       .replace(/{{OrderDetailsRows}}/g, orderDetailsRows)
-      .replace(/{{ActionMessage}}/g, isTruck
-        ? 'Please review this RFQ and provide your quotation through the dashboard. The buyer is waiting for your response.'
-        : 'Please review this order and take appropriate action through your dashboard. Quick response ensures smooth transaction flow.')
-      .replace(/{{ActionButtonText}}/g, isTruck ? 'View RFQ Details' : 'View Order Details')
+      .replace(
+        /{{ActionMessage}}/g,
+        isTruck
+          ? 'Please review this RFQ and provide your quotation through the dashboard. The buyer is waiting for your response.'
+          : 'Please review this order and take appropriate action through your dashboard. Quick response ensures smooth transaction flow.',
+      )
+      .replace(
+        /{{ActionButtonText}}/g,
+        isTruck ? 'View RFQ Details' : 'View Order Details',
+      )
       .replace(/{{OrderTypePlural}}/g, isTruck ? 'RFQs' : 'orders')
       .replace(/{{Sender}}/g, senderName)
       .replace(/{{Recipient}}/g, recipientName)
-      .replace(/{{OrderUrl}}/g, `${process.env.FRONTEND_URL}/dashboard/${isTruck ? 'my-rfq' : 'my-order'}/${order._id}`)
+      .replace(
+        /{{OrderUrl}}/g,
+        `${process.env.FRONTEND_URL}/dashboard/${isTruck ? 'my-rfq' : 'my-order'}/${order._id}`,
+      )
       .replace(/{{OrderTime}}/g, new Date().toLocaleString());
-
-
 
     await this.resendService.sendMail({
       to: recipient.email,
@@ -216,17 +251,23 @@ export class OrderService {
     await this.orderGateway.handleNewOrder(profile.userId, order._id, dto.type);
 
     return order;
-  };
+  }
 
-  async updateOrder(orderId: string, dto: OrderUpdateDto, user: IJwtPayload): Promise<OrderDocument | NegotiationDocument> {
+  async updateOrder(
+    orderId: string,
+    dto: OrderUpdateDto,
+    user: IJwtPayload,
+  ): Promise<OrderDocument | NegotiationDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order) {
       throw new BadRequestException('Order not found');
     }
 
-    console.log(dto, "dto")
+    console.log(dto, 'dto');
     if (order.type !== dto.type) {
-      throw new BadRequestException(`Order type mismatch: expected ${order.type}, got ${dto.type}`);
+      throw new BadRequestException(
+        `Order type mismatch: expected ${order.type}, got ${dto.type}`,
+      );
     }
 
     let entity: any;
@@ -252,7 +293,9 @@ export class OrderService {
           ? await this.sellerRepository.findOne(entity.profileId)
           : await this.transporterRepository.findOne(entity.profileId);
     } else {
-      entity = await this.productUploadRepository.findOne(order.productUploadId);
+      entity = await this.productUploadRepository.findOne(
+        order.productUploadId,
+      );
       if (!entity) throw new BadRequestException('Product not found');
       profile = await this.sellerRepository.findOne(order.profileId);
       profileType = 'seller';
@@ -260,12 +303,17 @@ export class OrderService {
     if (!profile) throw new BadRequestException('Profile not found');
 
     const [recipient, sender] = await Promise.all([
-      this.userRepository.findOne(dto.type === 'truck' && dto.description === 'sending_rfq' ? buyer.userId : profile.userId),
+      this.userRepository.findOne(
+        dto.type === 'truck' && dto.description === 'sending_rfq'
+          ? buyer.userId
+          : profile.userId,
+      ),
       this.userRepository.findOne(user.id),
     ]);
     if (!recipient) throw new BadRequestException('Recipient not found');
     if (!sender) throw new BadRequestException('Sender not found');
-
+    const truck = await this.truckRepository.findOne(order.truckId);
+    const truckLoadStatus = truck?.loadStatus || 'unloaded';
     emailContext = {
       Sender: `${sender.firstName} ${sender.lastName}`,
       Recipient: `${recipient.firstName} ${recipient.lastName}`,
@@ -284,16 +332,17 @@ export class OrderService {
       OrderUrl: `${process.env.FRONTEND_URL}/dashboard/${dto.type === 'truck' ? 'my-rfq' : 'my-order'}/${order._id}`,
       UpdateTime: new Date().toLocaleString(),
     };
-    const emailSubject = `Order Update: ${dto.description === 'sending_rfq'
-      ? 'RFQ Sent'
-      : dto.description === 'accepting_order'
-        ? 'Order Accepted'
-        : dto.description === 'rejecting_order'
-          ? 'Order Rejected'
-          : dto.description === 'order_to_in_progress'
-            ? 'Order In Progress'
-            : 'Order Completed'
-      }`;
+    const emailSubject = `Order Update: ${
+      dto.description === 'sending_rfq'
+        ? 'RFQ Sent'
+        : dto.description === 'accepting_order'
+          ? 'Order Accepted'
+          : dto.description === 'rejecting_order'
+            ? 'Order Rejected'
+            : dto.description === 'order_to_in_progress'
+              ? 'Order In Progress'
+              : 'Order Completed'
+    }`;
 
     // Variable to track if negotiation was created during order rejection
     let negotiationCreated: NegotiationDocument | null = null;
@@ -325,84 +374,130 @@ export class OrderService {
         order.status = dto.status || 'in-progress';
         if (dto.type === 'truck' && dto.rfqStatus === 'accepted') {
           order.rfqStatus = 'accepted';
-          await this.truckRepository.update(order.truckId, { status: 'locked' });
+          await this.truckRepository.update(order.truckId, {
+            status: 'locked',
+          });
           await this.notifyOtherBuyers(order, user);
-            const serviceFees = await this.platformConfigService.getServiceFees();
-            const truck = await this.truckRepository.findOne(order.truckId);
-            if (!truck) {
-            throw new BadRequestException('Truck not found for ticket creation');
-            }
+          const serviceFees = await this.platformConfigService.getServiceFees();
+          const truck = await this.truckRepository.findOne(order.truckId);
+          if (!truck) {
+            throw new BadRequestException(
+              'Truck not found for ticket creation',
+            );
+          }
 
-            console.log(serviceFees, "serviceFees")
-            console.log(truck, "truck")
-            const transporterFeeRate = Number(serviceFees.transporterServiceFee);
-            const buyerFeeRate = Number(serviceFees.traderServiceFee);
-            const transporterFeeRateLoaded = Number(serviceFees.transporterServiceFeeLoaded);
-            const buyerFeeRateLoaded = Number(serviceFees.traderServiceFeeLoaded);
-            const transportFee = Number(order.price);
+          console.log(serviceFees, 'serviceFees');
+          console.log(truck, 'truck');
+          const transporterFeeRate = Number(serviceFees.transporterServiceFee);
+          const buyerFeeRate = Number(serviceFees.traderServiceFee);
+          const transporterFeeRateLoaded = Number(
+            serviceFees.transporterServiceFeeLoaded,
+          );
+          const buyerFeeRateLoaded = Number(serviceFees.traderServiceFeeLoaded);
+          const transportFee = Number(order.price);
 
-            if (isNaN(transportFee)) {
-            throw new BadRequestException('Invalid offer price for ticket creation');
-            }
+          if (isNaN(transportFee)) {
+            throw new BadRequestException(
+              'Invalid offer price for ticket creation',
+            );
+          }
 
-            let transporterServiceFee = 0;
-            let buyerServiceFee = 0;
+          let transporterServiceFee = 0;
+          let buyerServiceFee = 0;
 
-            if (truck.truckType === 'tanker') {
+          if (truck.truckType === 'tanker') {
             if (truck.loadStatus === 'unloaded') {
-              transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-              buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+              transporterServiceFee = isNaN(transporterFeeRate)
+                ? 0
+                : Number(
+                    ((transporterFeeRate / 100) * transportFee).toFixed(2),
+                  );
+              buyerServiceFee = isNaN(buyerFeeRate)
+                ? 0
+                : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
             } else if (truck.loadStatus === 'loaded') {
-              transporterServiceFee = isNaN(transporterFeeRateLoaded) ? 0 : Number(((transporterFeeRateLoaded / 100) * transportFee).toFixed(2));
-              buyerServiceFee = isNaN(buyerFeeRateLoaded) ? 0 : Number(((buyerFeeRateLoaded / 100) * transportFee).toFixed(2));
+              transporterServiceFee = isNaN(transporterFeeRateLoaded)
+                ? 0
+                : Number(
+                    ((transporterFeeRateLoaded / 100) * transportFee).toFixed(
+                      2,
+                    ),
+                  );
+              buyerServiceFee = isNaN(buyerFeeRateLoaded)
+                ? 0
+                : Number(
+                    ((buyerFeeRateLoaded / 100) * transportFee).toFixed(2),
+                  );
             } else {
-              transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-              buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+              transporterServiceFee = isNaN(transporterFeeRate)
+                ? 0
+                : Number(
+                    ((transporterFeeRate / 100) * transportFee).toFixed(2),
+                  );
+              buyerServiceFee = isNaN(buyerFeeRate)
+                ? 0
+                : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
             }
-            } else {
-            transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-            buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
-            }
+          } else {
+            transporterServiceFee = isNaN(transporterFeeRate)
+              ? 0
+              : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+            buyerServiceFee = isNaN(buyerFeeRate)
+              ? 0
+              : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+          }
 
-            // If any fee is zero, just return 0 for that role (already handled above)
+          // If any fee is zero, just return 0 for that role (already handled above)
 
-            // Ensure only one ticket per order
-            // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
-            const existingTicket = await this.ticketRepository.findByOrderId(order._id.toString());
-            if (!existingTicket) {
+          // Ensure only one ticket per order
+          // const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
+          const existingTicket = await this.ticketRepository.findByOrderId(
+            order._id.toString(),
+          );
+          if (!existingTicket) {
             await this.ticketService.create({
               orderId: order._id.toString(),
               transportFee,
               transporterServiceFee,
               buyerServiceFee,
             });
-            }
+          }
         }
         break;
 
       case 'rejecting_order':
-        if (user.id !== String(profile.userId) && user.id !== String(buyer.userId)) {
-          throw new BadRequestException('Only the buyer or seller/transporter can reject the order');
+        if (
+          user.id !== String(profile.userId) &&
+          user.id !== String(buyer.userId)
+        ) {
+          throw new BadRequestException(
+            'Only the buyer or seller/transporter can reject the order',
+          );
         }
         // order.status = 'cancelled';
         order.rfqStatus = dto.type === 'truck' ? 'rejected' : undefined;
 
         if (user.id === String(buyer.userId) && dto.offerPrice) {
-          negotiationCreated = await this.negotiationService.createNegotiation({
-            receiverId: profile.userId,
-            type: dto.type,
-            // productUploadId: dto.type === 'product' ? order.productUploadId : undefined,
-            // truckId: dto.type === 'truck' ? order.truckId : undefined,
-            orderId: order._id,
-            offerPrice: dto.offerPrice,
-            // volume: dto.type === 'product' ? order.volume : undefined,
-          }, user);
+          negotiationCreated = await this.negotiationService.createNegotiation(
+            {
+              receiverId: profile.userId,
+              type: dto.type,
+              // productUploadId: dto.type === 'product' ? order.productUploadId : undefined,
+              // truckId: dto.type === 'truck' ? order.truckId : undefined,
+              orderId: order._id,
+              offerPrice: dto.offerPrice,
+              // volume: dto.type === 'product' ? order.volume : undefined,
+            },
+            user,
+          );
           // Add negotiation id to order before saving
           await order.save();
           // const roomId = [user.id, profile.userId].sort().join(':');
           const roomId = negotiationCreated._id.toString();
-          console.log(negotiationCreated, "negotiation")
-          this.socketServer.to(roomId).emit(SOCKET_EVENTS.RECEIVE_NEGOTIATION, negotiationCreated);
+          console.log(negotiationCreated, 'negotiation');
+          this.socketServer
+            .to(roomId)
+            .emit(SOCKET_EVENTS.RECEIVE_NEGOTIATION, negotiationCreated);
 
           // We'll send the chat notification through the new notification system below
         }
@@ -410,14 +505,18 @@ export class OrderService {
 
       case 'order_to_in_progress':
         if (user.id !== profile.userId.toString()) {
-          throw new BadRequestException('Only the seller/transporter can update order to in progress');
+          throw new BadRequestException(
+            'Only the seller/transporter can update order to in progress',
+          );
         }
         order.status = 'in-progress';
         break;
 
       case 'order_to_completed':
         if (user.id !== profile.userId.toString()) {
-          throw new BadRequestException('Only the seller/transporter can mark order as completed');
+          throw new BadRequestException(
+            'Only the seller/transporter can mark order as completed',
+          );
         }
         order.status = 'completed';
         // if (dto.type === 'truck') {
@@ -432,7 +531,10 @@ export class OrderService {
     await order.save();
 
     // Send email
-    let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/order-update.html'), 'utf8');
+    let generalHtml = fs.readFileSync(
+      join(__dirname, '../../../templates/order-update.html'),
+      'utf8',
+    );
 
     // Prepare dynamic title and message based on description
     let updateTitle = '';
@@ -440,29 +542,30 @@ export class OrderService {
     switch (dto.description) {
       case 'sending_rfq':
         updateTitle = 'New Price Quotation Received';
-        statusMessage = `${emailContext.Sender} has sent a price quotation for your ${emailContext.type} order request.`;
+        statusMessage = `${emailContext.Sender} has sent a price quotation for your ${emailContext.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : emailContext.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'product'} order request.`;
         break;
       case 'accepting_order':
         updateTitle = 'Order Accepted - Next Steps';
-        statusMessage = `Great news! ${emailContext.Sender} has accepted your ${emailContext.type} order.`;
+        statusMessage = `Great news! ${emailContext.Sender} has accepted your ${emailContext.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : emailContext.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'product'} order.`;
         break;
       case 'rejecting_order':
         updateTitle = 'Order Update - Price Negotiation';
-        statusMessage = `${emailContext.Sender} has proposed a new price for your ${emailContext.type} order.`;
+        statusMessage = `${emailContext.Sender} has proposed a new price for your ${emailContext.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : emailContext.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'product'} order.`;
         break;
       case 'order_to_in_progress':
         updateTitle = 'Order Now In Progress';
-        statusMessage = `Your ${emailContext.type} order is now being processed.`;
+        statusMessage = `Your ${emailContext.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : emailContext.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'product'} order is now being processed.`;
         break;
       case 'order_to_completed':
         updateTitle = 'Order Successfully Completed';
-        statusMessage = `Your ${emailContext.type} order has been successfully completed.`;
+        statusMessage = `Your ${emailContext.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : emailContext.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'product'} order has been successfully completed.`;
         break;
     }
 
     // Prepare order details rows based on type
-    const orderDetailsRows = dto.type === 'truck' ?
-      `<tr>
+    const orderDetailsRows =
+      dto.type === 'truck'
+        ? `<tr>
           <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Number:</td>
           <td style="padding:8px 0; color:#666;">${emailContext.TruckId}</td>
       </tr>
@@ -481,8 +584,8 @@ export class OrderService {
       <tr>
           <td style="padding:8px 0; color:#444; font-weight:600;">City:</td>
           <td style="padding:8px 0; color:#666;">${emailContext.City}</td>
-      </tr>` :
-      `<tr>
+      </tr>`
+        : `<tr>
           <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Product:</td>
           <td style="padding:8px 0; color:#666;">${emailContext.ProductName}</td>
       </tr>
@@ -493,7 +596,10 @@ export class OrderService {
 
     // Prepare additional details rows (price and arrival time)
     let additionalDetailsRows = '';
-    if (dto.description === 'sending_rfq' || dto.description === 'rejecting_order') {
+    if (
+      dto.description === 'sending_rfq' ||
+      dto.description === 'rejecting_order'
+    ) {
       additionalDetailsRows += `
       <tr>
           <td style="padding:8px 0; color:#444; font-weight:600;">Price:</td>
@@ -564,9 +670,7 @@ export class OrderService {
       to: recipient.email,
       subject: emailSubject,
       html: getHtmlWithFooter(generalHtml),
-
     });
-
 
     // Use new notification system for order updates with description context
     await this.orderGateway.handleOrderUpdate(
@@ -578,8 +682,8 @@ export class OrderService {
         status: order.status,
         rfqStatus: order.rfqStatus,
         price: order.price,
-        negotiationId: negotiationCreated?._id
-      }
+        negotiationId: negotiationCreated?._id,
+      },
     );
 
     // If a negotiation was created during rejection, return the negotiation instead of the order
@@ -597,7 +701,7 @@ export class OrderService {
       trackingId,
       truckId,
       profileType,
-      orderId
+      orderId,
     } = query as any;
 
     console.log('Fetching order with query:', query);
@@ -635,7 +739,9 @@ export class OrderService {
           profile = await this.transporterRepository.findOne(profileId);
         }
         if (profileId && !profile) {
-          throw new BadRequestException('Profile ID is invalid for the specified profile type');
+          throw new BadRequestException(
+            'Profile ID is invalid for the specified profile type',
+          );
         }
       }
 
@@ -657,14 +763,18 @@ export class OrderService {
     } else {
       // Non-admin users: filter by user's profile
       if (user.role === 'buyer') {
-        const buyer = await this.buyerRepository.findOneQuery({ userId: user.id });
+        const buyer = await this.buyerRepository.findOneQuery({
+          userId: user.id,
+        });
         if (buyer) {
           match.buyerId = buyer._id;
         } else {
           return { order: [], total: 0, currentPage: 1, totalPages: 0 };
         }
       } else if (user.role === 'seller') {
-        const seller = await this.sellerRepository.findOneQuery({ userId: user.id });
+        const seller = await this.sellerRepository.findOneQuery({
+          userId: user.id,
+        });
         if (seller) {
           match.profileId = seller._id;
           match.profileType = 'seller';
@@ -672,7 +782,9 @@ export class OrderService {
           return { order: [], total: 0, currentPage: 1, totalPages: 0 };
         }
       } else if (user.role === 'transporter') {
-        const transporter = await this.transporterRepository.findOneQuery({ userId: user.id });
+        const transporter = await this.transporterRepository.findOneQuery({
+          userId: user.id,
+        });
         if (transporter) {
           match.profileId = transporter._id;
           match.profileType = 'transporter';
@@ -698,7 +810,10 @@ export class OrderService {
     };
   }
 
-  async getAllOrderAdmin(query: OrderQueryDto, user: IJwtPayload): Promise<OrderDocument[]> {
+  async getAllOrderAdmin(
+    query: OrderQueryDto,
+    user: IJwtPayload,
+  ): Promise<OrderDocument[]> {
     if (user.role !== 'admin') {
       throw new BadRequestException('Admin access required');
     }
@@ -722,7 +837,10 @@ export class OrderService {
     return order;
   }
 
-  async updateStatusOrder(orderId: string, dto: OrderDto): Promise<OrderDocument> {
+  async updateStatusOrder(
+    orderId: string,
+    dto: OrderDto,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order) {
       throw new BadRequestException('Order not found');
@@ -735,7 +853,10 @@ export class OrderService {
     return order;
   }
 
-  async updatePriceOrder(orderId: string, dto: OrderDto): Promise<OrderDocument> {
+  async updatePriceOrder(
+    orderId: string,
+    dto: OrderDto,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order) {
       throw new BadRequestException('Order not found');
@@ -753,7 +874,10 @@ export class OrderService {
     return order;
   }
 
-  async updateRfqStatusOrder(orderId: string, dto: OrderDto): Promise<OrderDocument> {
+  async updateRfqStatusOrder(
+    orderId: string,
+    dto: OrderDto,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order || order.type !== 'truck') {
       throw new BadRequestException('Invalid truck order');
@@ -766,7 +890,11 @@ export class OrderService {
 
       // Cancel other pending order for the same truck
       await this.orderModel.updateMany(
-        { truckId: order.truckId, _id: { $ne: orderId }, status: { $ne: 'completed' } },
+        {
+          truckId: order.truckId,
+          _id: { $ne: orderId },
+          status: { $ne: 'completed' },
+        },
         { status: 'cancelled' },
       );
       // await this.ticketService.create({ orderId, serviceFee: calculateFee(order.price) });
@@ -775,31 +903,42 @@ export class OrderService {
       const buyerFeeRate = Number(serviceFees.traderServiceFee);
       const transportFee = Number(order.price);
 
-
       if (
         isNaN(transporterFeeRate) ||
         isNaN(buyerFeeRate) ||
         isNaN(transportFee)
       ) {
-        throw new BadRequestException('Invalid fee rates or offer price for ticket creation');
+        throw new BadRequestException(
+          'Invalid fee rates or offer price for ticket creation',
+        );
       }
 
       // Ensure only one ticket per order
-      const existingTicket = await this.ticketService.findByOrderId(order._id.toString());
+      const existingTicket = await this.ticketService.findByOrderId(
+        order._id.toString(),
+      );
       if (!existingTicket) {
-      await this.ticketService.create({
-        orderId: order._id.toString(),
-        transportFee,
-        transporterServiceFee: Number(((transporterFeeRate / 100) * transportFee).toFixed(2)),
-        buyerServiceFee: Number(((buyerFeeRate / 100) * transportFee).toFixed(2)),
-      });
+        await this.ticketService.create({
+          orderId: order._id.toString(),
+          transportFee,
+          transporterServiceFee: Number(
+            ((transporterFeeRate / 100) * transportFee).toFixed(2),
+          ),
+          buyerServiceFee: Number(
+            ((buyerFeeRate / 100) * transportFee).toFixed(2),
+          ),
+        });
       }
     }
     await order.save();
     return order;
   }
 
-  async rejectAndCreateNegotiation(orderId: string, body: { price: number }, user: IJwtPayload): Promise<NegotiationDocument> {
+  async rejectAndCreateNegotiation(
+    orderId: string,
+    body: { price: number },
+    user: IJwtPayload,
+  ): Promise<NegotiationDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order || order.type !== 'truck') {
       throw new BadRequestException('Invalid truck order');
@@ -822,8 +961,11 @@ export class OrderService {
     await order.save();
   }
 
-
-  async acceptNegotiationOrder(orderId: string, user: any, offerPrice?: number): Promise<OrderDocument> {
+  async acceptNegotiationOrder(
+    orderId: string,
+    user: any,
+    offerPrice?: number,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(orderId);
     if (!order) {
       throw new BadRequestException('Order not found');
@@ -831,18 +973,32 @@ export class OrderService {
     let hasAccess = false;
 
     if (user.role === 'buyer') {
-      const buyer = await this.buyerRepository.findOneQuery({ userId: user.id });
+      const buyer = await this.buyerRepository.findOneQuery({
+        userId: user.id,
+      });
       if (buyer && order.buyerId.toString() === buyer._id.toString()) {
         hasAccess = true;
       }
     } else if (user.role === 'seller') {
-      const seller = await this.sellerRepository.findOneQuery({ userId: user.id });
-      if (seller && order.profileType === 'seller' && order.profileId.toString() === seller._id.toString()) {
+      const seller = await this.sellerRepository.findOneQuery({
+        userId: user.id,
+      });
+      if (
+        seller &&
+        order.profileType === 'seller' &&
+        order.profileId.toString() === seller._id.toString()
+      ) {
         hasAccess = true;
       }
     } else if (user.role === 'transporter') {
-      const transporter = await this.transporterRepository.findOneQuery({ userId: user.id });
-      if (transporter && order.profileType === 'transporter' && order.profileId.toString() === transporter._id.toString()) {
+      const transporter = await this.transporterRepository.findOneQuery({
+        userId: user.id,
+      });
+      if (
+        transporter &&
+        order.profileType === 'transporter' &&
+        order.profileId.toString() === transporter._id.toString()
+      ) {
         hasAccess = true;
       }
     }
@@ -870,13 +1026,17 @@ export class OrderService {
 
       const transporterFeeRate = Number(serviceFees.transporterServiceFee);
       const buyerFeeRate = Number(serviceFees.traderServiceFee);
-      const transporterFeeRateLoaded = Number(serviceFees.transporterServiceFeeLoaded);
+      const transporterFeeRateLoaded = Number(
+        serviceFees.transporterServiceFeeLoaded,
+      );
       const buyerFeeRateLoaded = Number(serviceFees.traderServiceFeeLoaded);
       const transportFee = Number(offerPrice);
-      console.log(transportFee, "Ffffff")
+      console.log(transportFee, 'Ffffff');
 
       if (isNaN(transportFee)) {
-        throw new BadRequestException('Invalid offer price for ticket creation');
+        throw new BadRequestException(
+          'Invalid offer price for ticket creation',
+        );
       }
 
       let transporterServiceFee = 0;
@@ -884,22 +1044,42 @@ export class OrderService {
 
       if (truck.truckType === 'tanker') {
         if (truck.loadStatus === 'unloaded') {
-          transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-          buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+          transporterServiceFee = isNaN(transporterFeeRate)
+            ? 0
+            : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+          buyerServiceFee = isNaN(buyerFeeRate)
+            ? 0
+            : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
         } else if (truck.loadStatus === 'loaded') {
-          transporterServiceFee = isNaN(transporterFeeRateLoaded) ? 0 : Number(((transporterFeeRateLoaded / 100) * transportFee).toFixed(2));
-          buyerServiceFee = isNaN(buyerFeeRateLoaded) ? 0 : Number(((buyerFeeRateLoaded / 100) * transportFee).toFixed(2));
+          transporterServiceFee = isNaN(transporterFeeRateLoaded)
+            ? 0
+            : Number(
+                ((transporterFeeRateLoaded / 100) * transportFee).toFixed(2),
+              );
+          buyerServiceFee = isNaN(buyerFeeRateLoaded)
+            ? 0
+            : Number(((buyerFeeRateLoaded / 100) * transportFee).toFixed(2));
         } else {
-          transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-          buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+          transporterServiceFee = isNaN(transporterFeeRate)
+            ? 0
+            : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+          buyerServiceFee = isNaN(buyerFeeRate)
+            ? 0
+            : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
         }
       } else {
-        transporterServiceFee = isNaN(transporterFeeRate) ? 0 : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
-        buyerServiceFee = isNaN(buyerFeeRate) ? 0 : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
+        transporterServiceFee = isNaN(transporterFeeRate)
+          ? 0
+          : Number(((transporterFeeRate / 100) * transportFee).toFixed(2));
+        buyerServiceFee = isNaN(buyerFeeRate)
+          ? 0
+          : Number(((buyerFeeRate / 100) * transportFee).toFixed(2));
       }
 
       // Ensure only one ticket per order
-      const existingTicket = await this.ticketRepository.findByOrderId(order._id.toString());
+      const existingTicket = await this.ticketRepository.findByOrderId(
+        order._id.toString(),
+      );
       if (!existingTicket) {
         await this.ticketService.create({
           orderId: order._id.toString(),
@@ -910,25 +1090,33 @@ export class OrderService {
       }
     }
     await order.save();
+    const truckLoadStatus =
+      order.type === 'truck'
+        ? (await this.truckRepository.findOne(order.truckId))?.loadStatus
+        : null;
 
     const recipient = await this.userRepository.findOne(
       order.buyerId.toString() === user.id ? order.profileId : order.buyerId,
     );
     if (recipient) {
       // Read and prepare email template
-      let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/order-update.html'), 'utf8');
+      let generalHtml = fs.readFileSync(
+        join(__dirname, '../../../templates/order-update.html'),
+        'utf8',
+      );
 
       // Prepare order details based on type
-      const orderDetailsRows = order.type === 'truck' ?
-        `<tr>
+      const orderDetailsRows =
+        order.type === 'truck'
+          ? `<tr>
             <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Number:</td>
             <td style="padding:8px 0; color:#666;">${order.truckId}</td>
         </tr>
         <tr>
             <td style="padding:8px 0; color:#444; font-weight:600;">Loading Depot:</td>
             <td style="padding:8px 0; color:#666;">${order.loadingDepot}</td>
-        </tr>` :
-        `<tr>
+        </tr>`
+          : `<tr>
             <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Product:</td>
             <td style="padding:8px 0; color:#666;">${order.productUploadId}</td>
         </tr>`;
@@ -950,14 +1138,23 @@ export class OrderService {
 
       generalHtml = generalHtml
         .replace(/{{UpdateTitle}}/g, 'Order Accepted - Next Steps')
-        .replace(/{{StatusMessage}}/g, `Great news! ${user.firstName} has accepted your ${order.type} order.`)
+        .replace(
+          /{{StatusMessage}}/g,
+          `Great news! ${user.firstName} has accepted your ${order.type === 'truck' && truckLoadStatus === 'unloaded' ? 'truck' : order.type === 'truck' && truckLoadStatus === 'loaded' ? 'volume' : 'Product Order'}.`,
+        )
         .replace(/{{OrderDetailsRows}}/g, orderDetailsRows)
         .replace(/{{AdditionalDetailsRows}}/g, additionalDetailsRows)
         .replace(/{{StatusNoticeBlock}}/g, statusNoticeBlock)
-        .replace(/{{Recipient}}/g, `${recipient.firstName} ${recipient.lastName}`)
+        .replace(
+          /{{Recipient}}/g,
+          `${recipient.firstName} ${recipient.lastName}`,
+        )
         .replace(/{{Status}}/g, 'Accepted')
         .replace(/{{UpdateTime}}/g, new Date().toLocaleString())
-        .replace(/{{OrderUrl}}/g, `${process.env.FRONTEND_URL}/dashboard/${order.type === 'truck' ? 'my-rfq' : 'my-order'}/${order._id}`);
+        .replace(
+          /{{OrderUrl}}/g,
+          `${process.env.FRONTEND_URL}/dashboard/${order.type === 'truck' ? 'my-rfq' : 'my-order'}/${order._id}`,
+        );
 
       await this.resendService.sendMail({
         to: recipient.email,
@@ -978,18 +1175,32 @@ export class OrderService {
     let hasAccess = false;
 
     if (user.role === 'buyer') {
-      const buyer = await this.buyerRepository.findOneQuery({ userId: user._id });
+      const buyer = await this.buyerRepository.findOneQuery({
+        userId: user._id,
+      });
       if (buyer && order.buyerId.toString() === buyer._id.toString()) {
         hasAccess = true;
       }
     } else if (user.role === 'seller') {
-      const seller = await this.sellerRepository.findOneQuery({ userId: user._id });
-      if (seller && order.profileType === 'seller' && order.profileId.toString() === seller._id.toString()) {
+      const seller = await this.sellerRepository.findOneQuery({
+        userId: user._id,
+      });
+      if (
+        seller &&
+        order.profileType === 'seller' &&
+        order.profileId.toString() === seller._id.toString()
+      ) {
         hasAccess = true;
       }
     } else if (user.role === 'transporter') {
-      const transporter = await this.transporterRepository.findOneQuery({ userId: user._id });
-      if (transporter && order.profileType === 'transporter' && order.profileId.toString() === transporter._id.toString()) {
+      const transporter = await this.transporterRepository.findOneQuery({
+        userId: user._id,
+      });
+      if (
+        transporter &&
+        order.profileType === 'transporter' &&
+        order.profileId.toString() === transporter._id.toString()
+      ) {
         hasAccess = true;
       }
     }
@@ -1005,23 +1216,29 @@ export class OrderService {
     await order.save();
 
     const recipient = await this.userRepository.findOne(
-      order.buyerId._id.toString() === user._id ? order.profileId._id.toString() : order.buyerId._id.toString(),
+      order.buyerId._id.toString() === user._id
+        ? order.profileId._id.toString()
+        : order.buyerId._id.toString(),
     );
     if (recipient) {
       // Read and prepare email template
-      let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/order-update.html'), 'utf8');
+      let generalHtml = fs.readFileSync(
+        join(__dirname, '../../../templates/order-update.html'),
+        'utf8',
+      );
 
       // Prepare order details based on type
-      const orderDetailsRows = order.type === 'truck' ?
-        `<tr>
+      const orderDetailsRows =
+        order.type === 'truck'
+          ? `<tr>
             <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Number:</td>
             <td style="padding:8px 0; color:#666;">${order.truckId}</td>
         </tr>
         <tr>
             <td style="padding:8px 0; color:#444; font-weight:600;">Loading Depot:</td>
             <td style="padding:8px 0; color:#666;">${order.loadingDepot}</td>
-        </tr>` :
-        `<tr>
+        </tr>`
+          : `<tr>
             <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Product ID:</td>
             <td style="padding:8px 0; color:#666;">${order.productUploadId}</td>
         </tr>`;
@@ -1036,14 +1253,23 @@ export class OrderService {
 
       generalHtml = generalHtml
         .replace(/{{UpdateTitle}}/g, 'Order Cancelled')
-        .replace(/{{StatusMessage}}/g, `${user.firstName} has cancelled this ${order.type} order.`)
+        .replace(
+          /{{StatusMessage}}/g,
+          `${user.firstName} has cancelled this ${order.type} order.`,
+        )
         .replace(/{{OrderDetailsRows}}/g, orderDetailsRows)
         .replace(/{{AdditionalDetailsRows}}/g, '')
         .replace(/{{StatusNoticeBlock}}/g, statusNoticeBlock)
-        .replace(/{{Recipient}}/g, `${recipient.firstName} ${recipient.lastName}`)
+        .replace(
+          /{{Recipient}}/g,
+          `${recipient.firstName} ${recipient.lastName}`,
+        )
         .replace(/{{Status}}/g, 'Cancelled')
         .replace(/{{UpdateTime}}/g, new Date().toLocaleString())
-        .replace(/{{OrderUrl}}/g, `${process.env.FRONTEND_URL}/dashboard/${order.type === 'truck' ? 'my-rfq' : 'my-order'}/${order._id}`);
+        .replace(
+          /{{OrderUrl}}/g,
+          `${process.env.FRONTEND_URL}/dashboard/${order.type === 'truck' ? 'my-rfq' : 'my-order'}/${order._id}`,
+        );
 
       await this.resendService.sendMail({
         to: recipient.email,
@@ -1055,7 +1281,10 @@ export class OrderService {
     return order;
   }
 
-  private async notifyOtherBuyers(order: OrderDocument, user: IJwtPayload): Promise<void> {
+  private async notifyOtherBuyers(
+    order: OrderDocument,
+    user: IJwtPayload,
+  ): Promise<void> {
     if (order.type !== 'truck') return;
 
     const otherOrders = await this.orderModel.find({
@@ -1071,19 +1300,23 @@ export class OrderService {
       const recipient = await this.userRepository.findOne(otherOrder.buyerId);
       if (recipient && recipient._id.toString() !== user.id) {
         // Read and prepare email template for other buyers
-        let generalHtml = fs.readFileSync(join(__dirname, '../../../templates/order-update.html'), 'utf8');
+        let generalHtml = fs.readFileSync(
+          join(__dirname, '../../../templates/order-update.html'),
+          'utf8',
+        );
 
         // Prepare order details for cancelled order
-        const orderDetailsRows = otherOrder.type === 'truck' ?
-          `<tr>
+        const orderDetailsRows =
+          otherOrder.type === 'truck'
+            ? `<tr>
               <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Truck Number:</td>
               <td style="padding:8px 0; color:#666;">${otherOrder.truckId}</td>
           </tr>
           <tr>
               <td style="padding:8px 0; color:#444; font-weight:600;">Loading Depot:</td>
               <td style="padding:8px 0; color:#666;">${otherOrder.loadingDepot}</td>
-          </tr>` :
-          `<tr>
+          </tr>`
+            : `<tr>
               <td style="padding:8px 0; color:#444; font-weight:600; width:40%;">Product ID:</td>
               <td style="padding:8px 0; color:#666;">${otherOrder.productUploadId}</td>
           </tr>`;
@@ -1098,15 +1331,27 @@ export class OrderService {
           </div>`;
 
         generalHtml = generalHtml
-          .replace(/{{UpdateTitle}}/g, 'Order Cancelled - Another Order Accepted')
-          .replace(/{{StatusMessage}}/g, `Your ${otherOrder.type} order has been cancelled as another buyer's offer was accepted.`)
+          .replace(
+            /{{UpdateTitle}}/g,
+            'Order Cancelled - Another Order Accepted',
+          )
+          .replace(
+            /{{StatusMessage}}/g,
+            `Your ${otherOrder.type} order has been cancelled as another buyer's offer was accepted.`,
+          )
           .replace(/{{OrderDetailsRows}}/g, orderDetailsRows)
           .replace(/{{AdditionalDetailsRows}}/g, '')
           .replace(/{{StatusNoticeBlock}}/g, statusNoticeBlock)
-          .replace(/{{Recipient}}/g, `${recipient.firstName} ${recipient.lastName}`)
+          .replace(
+            /{{Recipient}}/g,
+            `${recipient.firstName} ${recipient.lastName}`,
+          )
           .replace(/{{Status}}/g, 'Cancelled (Other Accepted)')
           .replace(/{{UpdateTime}}/g, new Date().toLocaleString())
-          .replace(/{{OrderUrl}}/g, `${process.env.FRONTEND_URL}/dashboard/my-rfq/${otherOrder._id}`);
+          .replace(
+            /{{OrderUrl}}/g,
+            `${process.env.FRONTEND_URL}/dashboard/my-rfq/${otherOrder._id}`,
+          );
 
         await this.resendService.sendMail({
           to: recipient.email,
