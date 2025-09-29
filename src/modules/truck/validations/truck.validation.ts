@@ -15,7 +15,7 @@ export const truckSchema = yup.object({
     .required('Truck category is required'),
   truckNumber: yup
     .string()
-    .required('Truck number is required'),
+    .optional(),
   capacity: yup
     .number()
     .required('Truck capacity is required'),

@@ -7,7 +7,7 @@ export type TruckDocument = HydratedDocument<Truck>;
 
 @Schema({ versionKey: false, timestamps: true })
 export class Truck {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: false, unique: true })
   truckNumber: string;
 
   @Prop({ required: false })
@@ -52,6 +52,9 @@ export class Truck {
 
   @Prop({ required: true, enum: ['diesel', 'cng'], default: 'diesel' })
   truckFuelType?: string;
+
+  @Prop({ required: true, unique: true })
+  refNo: string;
 }
 
 export const TruckSchema = SchemaFactory.createForClass(Truck);

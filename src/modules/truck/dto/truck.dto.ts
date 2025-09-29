@@ -10,7 +10,7 @@ export interface TruckDto {
   // currentState?: string;
   // currentCity?: string;
   profileType?: string;
-  truckNumber: string
+  truckNumber?: string
   capacity?: string
   depotHubId?: string | Types.ObjectId
   depot?: string
@@ -22,6 +22,7 @@ export interface TruckDto {
   loadStatus?: "loaded" | "unloaded"; 
   truckFuelType?: 'diesel' | 'cng';
   truckCategory?: 'A++' | 'A' | 'B' | 'C';
+  refNo?: string;
 }
 
 export interface TruckQueryDto extends QueryDto {
@@ -34,5 +35,6 @@ export interface TruckQueryDto extends QueryDto {
   loadStatus?: string; // New field for load status
   locationId?: string;
   truckFuelType?: 'diesel' | 'cng';
-  truckCategory?: 'A++' | 'A' | 'B' | 'C';  
+  truckCategory?: 'A++' | 'A' | 'B' | 'C';
+  refNo?: string;
 }

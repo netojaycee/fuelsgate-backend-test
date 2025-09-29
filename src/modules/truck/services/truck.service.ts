@@ -11,10 +11,12 @@ import { UserRoleRepository } from "src/modules/role/repositories/user-role.repo
 import { RoleRepository } from "src/modules/role/repositories/role.repository";
 import { ResendService } from 'src/modules/resend/resend.service';
 ;
-import { Types } from "mongoose";
+import { Types, Model } from "mongoose";
 import { join } from "path";
 import * as fs from 'fs';
 import { getHtmlWithFooter } from 'src/utils/helpers';
+import { InjectModel } from '@nestjs/mongoose';
+import { Truck } from '../entities/truck.entity';
 
 @Injectable()
 export class TruckService {
@@ -28,6 +30,7 @@ export class TruckService {
     private userRoleRepository: UserRoleRepository,
     private roleRepository: RoleRepository,
     private readonly resendService: ResendService,
+    @InjectModel(Truck.name) private truckModel: Model<Truck>,
   ) { }
 
   async saveNewTruckData(truckData: TruckDto, user: IJwtPayload) {
@@ -114,6 +117,10 @@ export class TruckService {
       // truckData.productId = product._id;
       // truckData.depotHubId = depotHub._id;
       // truckData.truckType = 'tanker';
+      
+      // Generate unique reference number
+      truckData.refNo = await this.generateTruckRefNo();
+      
       // Create the truck
       const newTruck = await this.truckRepository.create(truckData);
       // Send admin notification email for vetting/activation (only for non-admin created trucks)
@@ -212,7 +219,8 @@ console.log(query)
     if (search) searchFilter.$or.push(
       { companyName: { $regex: search, $options: 'i' } },
       { phoneNumber: { $regex: search, $options: 'i' } },
-      { truckNumber: { $regex: search, $options: 'i' } }
+      { truckNumber: { $regex: search, $options: 'i' } },
+      { refNo: { $regex: search, $options: 'i' } },
     );
 
     // Handle multiple statuses like in getUserTrucks
@@ -322,7 +330,8 @@ console.log(query)
     if (search) searchFilter.$or.push(
       { companyName: { $regex: search, $options: 'i' } },
       { phoneNumber: { $regex: search, $options: 'i' } },
-      { truckNumber: { $regex: search, $options: 'i' } }
+      { truckNumber: { $regex: search, $options: 'i' } },
+      { refNo: { $regex: search, $options: 'i' } },
     );
 
     // Handle multiple statuses
@@ -744,5 +753,40 @@ console.log(query)
       console.error('Error sending owner status update email:', error);
       // Don't throw error to prevent breaking the main flow
     }
+  }
+
+  /**
+   * Generate a unique alphanumeric reference number for trucks
+   * Format: 6 characters (3 letters + 3 numbers) e.g. ABC123
+   */
+  private async generateTruckRefNo(): Promise<string> {
+    const maxAttempts = 10;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      // Generate 3 random uppercase letters
+      const letters = Array.from({ length: 3 }, () => 
+        String.fromCharCode(65 + Math.floor(Math.random() * 26))
+      ).join('');
+
+      // Generate 3 random numbers
+      const numbers = Array.from({ length: 3 }, () => 
+        Math.floor(Math.random() * 10)
+      ).join('');
+
+      const refNo = letters + numbers;
+
+      // Check if this reference number already exists
+      const existingTruck = await this.truckModel.findOne({ refNo });
+      if (!existingTruck) {
+        return refNo;
+      }
+
+      attempts++;
+    }
+
+    // Fallback to timestamp-based generation if all attempts fail
+    const timestamp = Date.now().toString().slice(-6);
+    return 'TR' + timestamp;
   }
 }
